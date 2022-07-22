@@ -4,11 +4,23 @@ export const sendMessageSchema = z.object({
     roomId: z.string(),
     message: z.string(),
 });
-const userSchema = z.object({
+
+export let accountSchema: any = {};
+export let sessionSchema: any = {};
+export let messageSchema: any = {};
+export let userSchema: any = {};
+
+userSchema = z.object({
     id: z.string(),
     name: z.string(),
+    email: z.string(),
+    emailVerified: z.boolean(),
+    image: z.string(),
+    accounts: z.array(accountSchema),
+    sessions: z.array(sessionSchema),
+    messages: z.array(messageSchema)
 })
-const accountSchema: any = z.object({
+accountSchema = z.object({
     id: z.string(),
     userId: z.string(),
     type: z.string(),
@@ -24,8 +36,7 @@ const accountSchema: any = z.object({
     user: userSchema
 })
 
-
-const messageSchema = z.object({
+messageSchema = z.object({
     id: z.string(),
     message: z.string(),
     roomId: z.string(),
@@ -37,4 +48,15 @@ export type Message = z.TypeOf<typeof messageSchema>;
 
 export const messageSubSchema = z.object({
     roomId: z.string(),
+});
+export const getMessagesSchema = z.object({
+    roomId: z.string(),
+});
+export const createRoomShema = z.object({
+    roomName: z.string(),
+});
+export const signInSchema = z.object({
+    name: z.string(),
+    email: z.string(),
+    image: z.string(),
 });

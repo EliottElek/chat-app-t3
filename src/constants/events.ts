@@ -1,3 +1,6 @@
 export enum Events {
   SEND_MESSAGE = "SEND_MESSAGE",
+  GET_ALL_MESSAGES = "GET_ALL_MESSAGES",
+  CREATE_ROOM = "CREATE_ROOM"
+
 }

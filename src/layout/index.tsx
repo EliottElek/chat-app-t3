@@ -1,43 +1,12 @@
-/*
-  This example requires Tailwind CSS v2.0+ 
-  
-  This example requires some changes to your config:
-  
-  ```
-  // tailwind.config.js
-  module.exports = {
-    // ...
-    plugins: [
-      // ...
-      require('@tailwindcss/forms'),
-    ],
-  }
-  ```
-*/
-import { Fragment, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import { Dialog, Menu, Transition } from "@headlessui/react";
-import {
-  BellIcon,
-  CalendarIcon,
-  ChartBarIcon,
-  FolderIcon,
-  HomeIcon,
-  InboxIcon,
-  MenuAlt2Icon,
-  UsersIcon,
-  XIcon,
-} from "@heroicons/react/outline";
-import { SearchIcon } from "@heroicons/react/solid";
+import { BellIcon, MenuAlt2Icon, XIcon } from "@heroicons/react/outline";
+import Modal from "../components/Modal";
 import { Props } from "next/script";
-
-const navigation = [
-  { name: "Dashboard", href: "#", icon: HomeIcon, current: true },
-  { name: "Team", href: "#", icon: UsersIcon, current: false },
-  { name: "Projects", href: "#", icon: FolderIcon, current: false },
-  { name: "Calendar", href: "#", icon: CalendarIcon, current: false },
-  { name: "Documents", href: "#", icon: InboxIcon, current: false },
-  { name: "Reports", href: "#", icon: ChartBarIcon, current: false },
-];
+import { trpc } from "../utils/trpc";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import { useSession } from "next-auth/react";
 const userNavigation = [
   { name: "Your Profile", href: "#" },
   { name: "Settings", href: "#" },
@@ -49,8 +18,26 @@ function classNames(...classes: string[]) {
 }
 
 const Layout: React.FC<Props> = ({ title, children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { data: session } = useSession();
+  const [roomName, setRoomName] = useState("");
+  const [open, setOpen] = useState(false);
+  const inputRef = useRef(null);
 
+  const { mutateAsync: createNewRoom } = trpc.useMutation([
+    "room.create-new-room",
+  ]);
+
+  async function createRoom() {
+    const newRoom = await createNewRoom({
+      roomName,
+    });
+    if (newRoom) router.push(`/rooms/${newRoom.id}`);
+    else alert("Could not create channel.");
+  }
+  const router = useRouter();
+  const roomId = router.query.roomId as string;
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { data, isLoading } = trpc.useQuery(["room.get-rooms"]);
   return (
     <>
       <div>
@@ -114,31 +101,27 @@ const Layout: React.FC<Props> = ({ title, children }) => {
                     />
                   </div>
                   <div className="mt-5 flex-1 h-0 overflow-y-auto">
-                    <nav className="px-2 space-y-1">
-                      {navigation.map((item) => (
-                        <a
-                          key={item.name}
-                          href={item.href}
-                          className={classNames(
-                            item.current
-                              ? "bg-gray-900 text-white"
-                              : "text-gray-300 hover:bg-gray-700 hover:text-white",
-                            "group flex items-center px-2 py-2 text-base font-medium rounded-md"
-                          )}
-                        >
-                          <item.icon
-                            className={classNames(
-                              item.current
-                                ? "text-gray-300"
-                                : "text-gray-400 group-hover:text-gray-300",
-                              "mr-4 flex-shrink-0 h-6 w-6"
-                            )}
-                            aria-hidden="true"
-                          />
-                          {item.name}
-                        </a>
-                      ))}
-                    </nav>
+                    {isLoading ? (
+                      <p>Loading...</p>
+                    ) : (
+                      <nav className="px-2 space-y-1">
+                        {data?.map((item) => (
+                          <Link key={item.id} href={`/rooms/${item.id}`}>
+                            <a
+                              className={classNames(
+                                roomId === item.id
+                                  ? "bg-gray-700 text-white"
+                                  : "bg-transparent text-gray-300",
+                                "hover:bg-gray-700 hover:text-white",
+                                "group flex items-center px-2 py-2 text-base font-medium rounded-md"
+                              )}
+                            >
+                              {item.name}
+                            </a>
+                          </Link>
+                        ))}
+                      </nav>
+                    )}
                   </div>
                 </Dialog.Panel>
               </Transition.Child>
@@ -154,38 +137,43 @@ const Layout: React.FC<Props> = ({ title, children }) => {
           {/* Sidebar component, swap this element with another sidebar if you like */}
           <div className="flex-1 flex flex-col min-h-0 bg-gray-800">
             <div className="flex items-center h-16 flex-shrink-0 px-4 bg-gray-900">
-              <img
+              {/* <img
                 className="h-8 w-auto"
                 src="https://tailwindui.com/img/logos/workflow-logo-indigo-500-mark-white-text.svg"
                 alt="Workflow"
-              />
+              /> */}
             </div>
             <div className="flex-1 flex flex-col overflow-y-auto">
-              <nav className="flex-1 px-2 py-4 space-y-1">
-                {navigation.map((item) => (
-                  <a
-                    key={item.name}
-                    href={item.href}
-                    className={classNames(
-                      item.current
-                        ? "bg-gray-900 text-white"
-                        : "text-gray-300 hover:bg-gray-700 hover:text-white",
-                      "group flex items-center px-2 py-2 text-sm font-medium rounded-md"
-                    )}
-                  >
-                    <item.icon
-                      className={classNames(
-                        item.current
-                          ? "text-gray-300"
-                          : "text-gray-400 group-hover:text-gray-300",
-                        "mr-3 flex-shrink-0 h-6 w-6"
-                      )}
-                      aria-hidden="true"
-                    />
-                    {item.name}
-                  </a>
-                ))}
-              </nav>
+              {isLoading ? (
+                <p>Loading...</p>
+              ) : (
+                <nav className="flex-1 px-2 py-4 space-y-1 w-full">
+                  <div className="flex w-full items-center justify-center">
+                    <button
+                      onClick={() => setOpen(true)}
+                      type="button"
+                      className="mt-3 flex grow flex-1 justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:text-sm"
+                    >
+                      New chat room
+                    </button>
+                  </div>
+                  {data?.map((item) => (
+                    <Link key={item.id} href={`/rooms/${item.id}`}>
+                      <a
+                        className={classNames(
+                          roomId === item.id
+                            ? "bg-gray-700 text-white"
+                            : "bg-transparent text-gray-300",
+                          "hover:bg-gray-700 hover:text-white",
+                          "group flex items-center px-2 py-2 text-base font-medium rounded-md"
+                        )}
+                      >
+                        {item.name}
+                      </a>
+                    </Link>
+                  ))}
+                </nav>
+              )}
             </div>
           </div>
         </div>
@@ -201,23 +189,7 @@ const Layout: React.FC<Props> = ({ title, children }) => {
             </button>
             <div className="flex-1 px-4 flex justify-between">
               <div className="flex-1 flex">
-                <form className="w-full flex md:ml-0" action="#" method="GET">
-                  <label htmlFor="search-field" className="sr-only">
-                    Search
-                  </label>
-                  <div className="relative w-full text-gray-400 focus-within:text-gray-600">
-                    <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
-                      <SearchIcon className="h-5 w-5" aria-hidden="true" />
-                    </div>
-                    <input
-                      id="search-field"
-                      className="block w-full h-full pl-8 pr-3 py-2 border-transparent text-gray-900 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-0 focus:border-transparent sm:text-sm"
-                      placeholder="Search"
-                      type="search"
-                      name="search"
-                    />
-                  </div>
-                </form>
+                <h1 className={"h-full text-xl flex items-center"}>{title}</h1>
               </div>
               <div className="ml-4 flex items-center md:ml-6">
                 <button
@@ -233,11 +205,17 @@ const Layout: React.FC<Props> = ({ title, children }) => {
                   <div>
                     <Menu.Button className="max-w-xs bg-white flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                       <span className="sr-only">Open user menu</span>
-                      <img
-                        className="h-8 w-8 rounded-full"
-                        src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                        alt=""
-                      />
+                      {session?.user?.image ? (
+                        <img
+                          className="h-10 w-10 rounded-full"
+                          src={session.user.image}
+                          alt=""
+                        />
+                      ) : (
+                        <span className="h-10 w-10 uppercase rounded-full bg-slate-200 flex items-center justify-center">
+                          {session?.user?.name ? session?.user?.name[0] : "?"}
+                        </span>
+                      )}
                     </Menu.Button>
                   </div>
                   <Transition
@@ -274,6 +252,43 @@ const Layout: React.FC<Props> = ({ title, children }) => {
           <main className="flex w-full flex-1 overflow-auto">{children}</main>
         </div>
       </div>
+      <Modal
+        open={open}
+        setOpen={setOpen}
+        onSuccess={createRoom}
+        focusRef={inputRef}
+        successBtnContent={"Create channel"}
+      >
+        <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+          <div className="sm:flex sm:items-start">
+            <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+              <Dialog.Title
+                as="h3"
+                className="text-lg leading-6 font-medium text-gray-900"
+              >
+                Create a new chat room
+              </Dialog.Title>
+              <div className="mt-2">
+                <p className="text-sm text-gray-500">
+                  You are about to create a new chat room.
+                </p>
+                <p className="text-sm text-gray-500">
+                  What name do you want to give it ?
+                </p>
+              </div>
+            </div>
+          </div>
+          <input
+            type="text"
+            autoFocus
+            ref={inputRef}
+            value={roomName}
+            onChange={(e) => setRoomName(e.target.value)}
+            className="focus:ring-indigo-500 border focus:border-indigo-500 block w-full p-4 mt-4 sm:text-sm border-gray-300 rounded-md"
+            placeholder="The name of the chat room..."
+          />
+        </div>
+      </Modal>
     </>
   );
 };

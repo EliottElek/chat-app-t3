@@ -1,20 +1,18 @@
-import type { NextPage } from "next";
 import Head from "next/head";
-import { customAlphabet } from "nanoid";
+import Modal from "../components/Modal";
 import { useRouter } from "next/router";
 import Layout from "../layout";
+import { trpc } from "../utils/trpc";
+import { useState, useRef } from "react";
+import { Dialog } from "@headlessui/react";
+import { signIn, useSession } from "next-auth/react";
 
-const nanoid = customAlphabet("abcdefghijklmnopqrstuvqxyz0123456789", 4);
-
-const Home: NextPage = () => {
+const Home = () => {
   const router = useRouter();
+  const { data: session, status } = useSession();
 
-  function createRoom() {
-    const roomId = nanoid();
-
-    router.push(`/rooms/${roomId}`);
-  }
-
+  if (!session && status !== "loading" && typeof window !== "undefined")
+    signIn();
   return (
     <>
       <Head>
@@ -23,9 +21,7 @@ const Home: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <Layout>
-        <button onClick={createRoom}>create chat room</button>
-      </Layout>
+      <Layout></Layout>
     </>
   );
 };

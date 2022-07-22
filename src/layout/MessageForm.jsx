@@ -7,8 +7,8 @@ const MessageForm = ({ sendMessageMutation, roomId, message, setMessage }) => {
         e.preventDefault();
 
         sendMessageMutation({
-          roomId,
-          message,
+          roomId: roomId,
+          message: message,
         });
 
         setMessage("");

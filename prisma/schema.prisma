@@ -46,20 +46,34 @@ model User {
   id            String    @id @default(cuid())
   name          String?
   email         String?   @unique
-  emailVerified DateTime?
+  emailVerified Boolean?
   image         String?
   accounts      Account[]
   sessions      Session[]
-  messages      Message[]
+  rooms         Room[]
+  creator       Room[]    @relation("creator")
+  Message       Message[]
 }
 
 model Message {
-  id      String   @id @default(cuid())
-  message String?
-  roomId  String?
-  sentAt  DateTime
-  sender  User     @relation(fields: [userId], references: [id])
-  userId  String
+  id       String   @id @default(cuid())
+  message  String?
+  roomId   String
+  sentAt   DateTime
+  senderId String
+  room     Room     @relation(fields: [roomId], references: [id])
+  sender   User     @relation(fields: [senderId], references: [id])
+}
+
+model Room {
+  id        String    @id @default(cuid())
+  name      String
+  messages  Message[]
+  createdAt DateTime
+  creatorId String?
+  members   User[]
+  creator   User?      @relation("creator", fields: [creatorId], references: [id])
+  private   Boolean
 }
 
 model VerificationToken {
