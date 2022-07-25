@@ -122,13 +122,6 @@ function RoomPage() {
       setMessages(messagesData);
     }
   }, [setMessages, messagesData, isLoadingMessagesData]);
-  useEffect(() => {
-    const readRoom = async () => {
-      await readRoomMutation({ roomId: roomId });
-      refetchRooms();
-    };
-    if (roomId) readRoom();
-  }, [roomId]);
 
   if (!isLoading && !data && typeof window !== "undefined") router.push("/404");
   const { mutateAsync: sendMessageMutation } = trpc.useMutation([
@@ -143,6 +136,10 @@ function RoomPage() {
   const { mutateAsync: addMemberMutation } = trpc.useMutation([
     "room.add-member-room",
   ]);
+  const readRoom = async () => {
+    await readRoomMutation({ roomId: roomId });
+    refetchRooms();
+  };
   trpc.useSubscription(
     [
       "room.onSendMessage",
@@ -247,6 +244,7 @@ function RoomPage() {
             ))}
           </ul>
           <MessageForm
+            onFocus={readRoom}
             sendMessageMutation={sendMessageMutation}
             roomId={roomId}
             message={message}
@@ -301,7 +299,7 @@ function RoomPage() {
           >
             Add a new member
           </button>
-          <h3 className = "text-left w-full mt-3">Members</h3>
+          <h3 className="text-left w-full mt-3">Members</h3>
           <div className="w-full flex flex-col gap-1">
             {data?.members.map((member) => (
               <div
