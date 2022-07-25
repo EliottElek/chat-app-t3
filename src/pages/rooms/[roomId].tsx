@@ -9,6 +9,7 @@ import MessageForm from "../../layout/MessageForm";
 import SlideOver from "../../components/SlideOver";
 import { Context } from "../../AppContext";
 import Modal from "../../components/Modal";
+import UserSelect from "../../layout/UserSelect";
 import {
   CheckIcon,
   EmojiHappyIcon,
@@ -16,6 +17,8 @@ import {
   DotsVerticalIcon,
 } from "@heroicons/react/outline";
 import { Dialog } from "@headlessui/react";
+import Avatar from "../../components/Avatar";
+import { User } from ".prisma/client";
 function MessageItem({
   message,
   session,
@@ -41,17 +44,7 @@ function MessageItem({
         message.sender?.id === session?.user?.id && "self-end flex-row-reverse",
       ].join(" ")}
     >
-      {message.sender.image ? (
-        <img
-          className="h-8 w-8 rounded-full"
-          src={message.sender.image}
-          alt=""
-        />
-      ) : (
-        <span className="h-8 w-8 uppercase rounded-full bg-slate-200 flex items-center justify-center">
-          {message.sender.name ? message.sender.name[0] : "?"}
-        </span>
-      )}
+      <Avatar user={message.sender} size="8" />
       <li className={liStyles}>{message.message}</li>
       <span className="text-[0.6rem] text-slate-400 self-end">
         {message.sentAt.toLocaleTimeString("en-AU", {
@@ -100,7 +93,10 @@ function RoomPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const { refetchRooms } = useContext(Context);
   const [openModal, setOpenModal] = useState(false);
+  const [openAddMemberModal, setOpenAddMemberModal] = useState(false);
   const [modifMode, setModifMode] = useState("image");
+  const [selected, setSelected] = useState<any>(null);
+
   const { data, isLoading, refetch } = trpc.useQuery([
     "room.get-room",
     {
@@ -135,6 +131,9 @@ function RoomPage() {
   const { mutateAsync: changeRoomNameMutation } = trpc.useMutation([
     "room.change-name-room",
   ]);
+  const { mutateAsync: addMemberMutation } = trpc.useMutation([
+    "room.add-member-room",
+  ]);
   trpc.useSubscription(
     [
       "room.onSendMessage",
@@ -168,6 +167,16 @@ function RoomPage() {
       name: nameInput,
     });
     setOpenModal(false);
+    refetchRooms();
+    refetch();
+  };
+  const handleAddMember = async () => {
+    if (!data || !selected) return;
+    await addMemberMutation({
+      roomId: data?.id,
+      memberId: selected.id,
+    });
+    setOpenAddMemberModal(false);
     refetchRooms();
     refetch();
   };
@@ -271,6 +280,18 @@ function RoomPage() {
           >
             Change room name
           </button>
+          <button
+            onClick={() => {
+              setOpenAddMemberModal(true);
+            }}
+            type="button"
+            className="mt-3 w-full flex grow flex-1 justify-center rounded-md border border-gray-300 px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:text-sm"
+          >
+            Add a new member
+          </button>
+          {data?.members?.map((member) => (
+            <h1>{member.name}</h1>
+          ))}
         </div>
       </SlideOver>
       <Modal
@@ -326,6 +347,36 @@ function RoomPage() {
               modifMode === "image" ? "New image url..." : "New name..."
             }
           />
+        </form>
+      </Modal>
+      <Modal
+        open={openAddMemberModal}
+        setOpen={setOpenAddMemberModal}
+        onSuccess={handleAddMember}
+        focusRef={inputRef}
+        successBtnContent={"Add member"}
+      >
+        <form
+          className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4"
+          onSubmit={handleAddMember}
+        >
+          <div className="sm:flex sm:items-start">
+            <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+              <Dialog.Title
+                as="h3"
+                className="text-lg leading-6 font-medium text-gray-900"
+              >
+                Add a new member
+              </Dialog.Title>
+              <div className="mt-2">
+                <p className="text-sm text-gray-500">
+                  You are about to add a new member
+                </p>
+                <p className="text-sm text-gray-500">Select the new member</p>
+              </div>
+            </div>
+          </div>
+          <UserSelect selected={selected} setSelected={setSelected} />
         </form>
       </Modal>
     </Layout>

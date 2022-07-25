@@ -91,3 +91,7 @@ export const changeNameRoomSchema = z.object({
     roomId: z.string(),
     name: z.string(),
 });
+export const addMemberRoomSchema = z.object({
+    roomId: z.string(),
+    memberId: z.string(),
+});

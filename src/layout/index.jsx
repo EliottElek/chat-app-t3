@@ -17,6 +17,7 @@ const userNavigation = [
   { name: "Settings", href: "#" },
   { name: "Sign out", href: "#" },
 ];
+import Avatar from "../components/Avatar";
 import { Context } from "../AppContext";
 function classNames(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -210,19 +211,7 @@ const Layout = ({ title, children, setOpenSlide }) => {
                         )}
                       >
                         <div className="flex items-center gap-2 w-full">
-                          {item.image ? (
-                            <img
-                              className="h-9 w-9 rounded-full"
-                              src={item.image}
-                              alt=""
-                            />
-                          ) : (
-                            <div>
-                              <div className="h-9 w-9 uppercase rounded-full bg-slate-200 flex items-center gap-2 justify-center">
-                                {item.name ? item.name[0] : "?"}
-                              </div>
-                            </div>
-                          )}
+                          <Avatar user={item} size="9" />
                           <span className="flex truncate flex-col max-w-full">
                             <span
                               className={[
@@ -317,17 +306,7 @@ const Layout = ({ title, children, setOpenSlide }) => {
                   <div>
                     <Menu.Button className="max-w-xs bg-white flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                       <span className="sr-only">Open user menu</span>
-                      {session?.user?.image ? (
-                        <img
-                          className="h-10 w-10 rounded-full"
-                          src={session.user.image}
-                          alt=""
-                        />
-                      ) : (
-                        <span className="h-10 w-10 uppercase rounded-full bg-slate-200 flex items-center justify-center">
-                          {session?.user?.name ? session?.user?.name[0] : "?"}
-                        </span>
-                      )}
+                      <Avatar user={session?.user} size="10" />
                     </Menu.Button>
                   </div>
                   <Transition

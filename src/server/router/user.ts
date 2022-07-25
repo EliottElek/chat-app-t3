@@ -13,3 +13,14 @@ export const userRouter = createRouter()
             return user;
         },
     })
+    .query("get-all-users", {
+        async resolve({ ctx, input }) {
+            return await prisma.user.findMany({
+                where: {
+                    NOT: {
+                        id: ctx?.session?.user?.id || ""
+                    }
+                },
+            })
+        },
+    })
