@@ -23,11 +23,14 @@ function MessageItem({
   session,
   room,
   last,
+  //Boolean to know if previous message is from the same sender
+  isFollowed,
 }: {
   message: Message;
   session: Session;
   room: Room;
   last: boolean;
+  isFollowed: boolean;
 }) {
   const { setMessageToReply, setFocusInput } = useContext(Context);
   const baseStyles =
@@ -73,7 +76,12 @@ function MessageItem({
             "self-end flex-row-reverse",
         ].join(" ")}
       >
-        <Avatar user={message.sender} size="8" />
+        <div
+          className={isFollowed ? "opacity-0 h-9 w-9" : "opacity-100 h-9 w-9"}
+        >
+          <Avatar user={message.sender} size="8" />
+        </div>
+
         <li className={liStyles}>{message.message}</li>
         <span className="text-[0.6rem] text-slate-400 self-end">
           {message.sentAt.toLocaleTimeString("en-AU", {
@@ -254,7 +262,7 @@ function RoomPage() {
     <Layout room={data} setOpenSlide={setOpenSlide}>
       {session && (
         <div className="flex flex-col flex-1 h-full ">
-          <ul className="flex flex-col p-4 flex-1 overflow-auto gap-4">
+          <ul className="flex flex-col p-4 flex-1 overflow-auto gap-2">
             {messages.map((m, i) => (
               <div key={m.id}>
                 {messages[i - 1] &&
@@ -266,6 +274,7 @@ function RoomPage() {
                     />
                   )}
                 <MessageItem
+                  isFollowed={messages[i - 1]?.sender?.id === m.sender.id}
                   last={i === messages.length - 1}
                   room={data}
                   message={m}
