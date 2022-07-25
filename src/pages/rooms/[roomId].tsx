@@ -18,7 +18,6 @@ import {
 } from "@heroicons/react/outline";
 import { Dialog } from "@headlessui/react";
 import Avatar from "../../components/Avatar";
-import { User } from ".prisma/client";
 function MessageItem({
   message,
   session,
@@ -96,7 +95,9 @@ function RoomPage() {
   const [openAddMemberModal, setOpenAddMemberModal] = useState(false);
   const [modifMode, setModifMode] = useState("image");
   const [selected, setSelected] = useState<any>(null);
-
+  const { mutateAsync: readRoomMutation } = trpc.useMutation([
+    "room.read-room",
+  ]);
   const { data, isLoading, refetch } = trpc.useQuery([
     "room.get-room",
     {
@@ -121,6 +122,14 @@ function RoomPage() {
       setMessages(messagesData);
     }
   }, [setMessages, messagesData, isLoadingMessagesData]);
+  useEffect(() => {
+    const readRoom = async () => {
+      await readRoomMutation({ roomId: roomId });
+      refetchRooms();
+    };
+    if (roomId) readRoom();
+  }, [roomId]);
+
   if (!isLoading && !data && typeof window !== "undefined") router.push("/404");
   const { mutateAsync: sendMessageMutation } = trpc.useMutation([
     "room.send-message",
@@ -210,8 +219,11 @@ function RoomPage() {
   );
   if (!session && status !== "loading" && typeof window !== "undefined")
     signIn();
+  function classNames(...classes: string[]) {
+    return classes.filter(Boolean).join(" ");
+  }
   return (
-    <Layout title={data?.name} setOpenSlide={setOpenSlide}>
+    <Layout room={data} setOpenSlide={setOpenSlide}>
       {session && (
         <div className="flex flex-col flex-1 h-full ">
           <ul className="flex flex-col p-4 flex-1 overflow-auto gap-4">
@@ -289,9 +301,25 @@ function RoomPage() {
           >
             Add a new member
           </button>
-          {data?.members?.map((member) => (
-            <h1>{member.name}</h1>
-          ))}
+          <h3 className = "text-left w-full mt-3">Members</h3>
+          <div className="w-full flex flex-col gap-1">
+            {data?.members.map((member) => (
+              <div
+                key={member.id}
+                className="flex items-center bg-slate-100 w-full rounded-md p-1"
+              >
+                <Avatar user={member} size="6" />
+                <span
+                  className={classNames(
+                    selected ? "font-semibold" : "font-normal",
+                    "ml-3 block truncate"
+                  )}
+                >
+                  {member.name}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </SlideOver>
       <Modal
@@ -302,7 +330,7 @@ function RoomPage() {
         successBtnContent={"Go"}
       >
         <form
-          className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4"
+          className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 rounded-lg"
           onSubmit={
             modifMode === "image" ? handleChangeImage : handleChangeName
           }
@@ -357,7 +385,7 @@ function RoomPage() {
         successBtnContent={"Add member"}
       >
         <form
-          className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4"
+          className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 rounded-lg"
           onSubmit={handleAddMember}
         >
           <div className="sm:flex sm:items-start">
@@ -382,5 +410,4 @@ function RoomPage() {
     </Layout>
   );
 }
-
 export default RoomPage;

@@ -23,7 +23,7 @@ const Avatar = ({ user, size }) => {
       ) : (
         <div>
           <div
-            className={`h-${size} w-${size} uppercase rounded-full bg-slate-200 flex items-center gap-2 justify-center`}
+            className={`h-9 w-9 uppercase rounded-full bg-slate-200 flex items-center gap-2 justify-center`}
           >
             {user.name ? user.name[0] : "?"}
           </div>
