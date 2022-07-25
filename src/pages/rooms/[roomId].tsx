@@ -29,6 +29,7 @@ function MessageItem({
   room: Room;
   last: boolean;
 }) {
+  const { setMessageToReply, setFocusInput } = useContext(Context);
   const baseStyles =
     "text-md max-w-[60%] p-2 border border-gray-200 rounded-lg shadow-sm text-gray-600 ";
 
@@ -36,48 +37,78 @@ function MessageItem({
     message.sender?.id === session?.user?.id
       ? baseStyles.concat("bg-green-200")
       : baseStyles.concat("self-end bg-white rounded-lg");
+
+  const handleAnswerMessage = () => {
+    setMessageToReply(message);
+    setTimeout(() => setFocusInput(true), 200);
+  };
   return (
-    <div
-      className={[
-        "flex gap-1 w-full relative group",
-        message.sender?.id === session?.user?.id && "self-end flex-row-reverse",
-      ].join(" ")}
-    >
-      <Avatar user={message.sender} size="8" />
-      <li className={liStyles}>{message.message}</li>
-      <span className="text-[0.6rem] text-slate-400 self-end">
-        {message.sentAt.toLocaleTimeString("en-AU", {
-          timeStyle: "short",
-        })}
-      </span>
-      {last &&
-        message.sender?.id === session?.user?.id &&
-        room?.readMembers.length > 1 && (
-          <span className="flex -gap-4 absolute -bottom-2 right-2 text-sky-500">
-            <CheckIcon className="h-4 w-4" />
-            <CheckIcon className="-ml-2 h-4 w-4" />
+    <>
+      {message.messageToAnswer && (
+        <div
+          className={[
+            "flex w-full",
+            message.sender?.id === session?.user?.id &&
+              "self-end flex-row-reverse",
+          ].join(" ")}
+        >
+          <span
+            className={[
+              "relative truncate max-w-md p-1 pl-6 translate-y-[6px] rounded-md bg-slate-300 bg-opacity-50 text-gray-500",
+              message.sender?.id === session?.user?.id
+                ? "-translate-x-[3rem]"
+                : "translate-x-[3rem]",
+            ].join(" ")}
+          >
+            <ReplyIcon className="left-1 top-[50%] -translate-y-1/2 absolute h-4 w-4 rotate-180 text-gray-500" />
+            {message.messageToAnswer.message}
           </span>
-        )}
+        </div>
+      )}
+
       <div
         className={[
-          "opacity-0 p-2 py-4 flex h-7 items-center gap-3 rounded-xl  bg-white text-gray-400 group-hover:opacity-100 transition-all delay-75 self-center -mt-4",
-          ,
-          message.sender?.id === session?.user?.id
-            ? "-mr-10"
-            : "-ml-10 flex-row-reverse",
+          "flex gap-1 w-full relative group",
+          message.sender?.id === session?.user?.id &&
+            "self-end flex-row-reverse",
         ].join(" ")}
       >
-        <button>
-          <ReplyIcon className="h-7 w-7 rounded-full border p-1" />
-        </button>
-        <button>
-          <EmojiHappyIcon className="h-7 w-7 rounded-full border p-1" />
-        </button>
-        <button>
-          <DotsVerticalIcon className="h-7 w-7 rounded-full border p-1" />
-        </button>
+        <Avatar user={message.sender} size="8" />
+        <li className={liStyles}>{message.message}</li>
+        <span className="text-[0.6rem] text-slate-400 self-end">
+          {message.sentAt.toLocaleTimeString("en-AU", {
+            timeStyle: "short",
+          })}
+        </span>
+        {last &&
+          message.sender?.id === session?.user?.id &&
+          room?.readMembers.length > 1 && (
+            <span className="flex -gap-4 absolute -bottom-2 right-2 text-sky-500">
+              <CheckIcon className="h-4 w-4" />
+              <CheckIcon className="-ml-2 h-4 w-4" />
+            </span>
+          )}
+        <div
+          className={[
+            "opacity-0 p-2 py-4 flex h-7 items-center gap-3 rounded-xl  bg-white text-gray-400 group-hover:opacity-100 transition-all delay-75 self-center -mt-4",
+            ,
+            message.sender?.id === session?.user?.id
+              ? "-mr-10"
+              : "-ml-10 flex-row-reverse",
+          ].join(" ")}
+        >
+          <button onClick={handleAnswerMessage}>
+            <ReplyIcon className="h-7 w-7 rounded-full border p-1" />
+          </button>
+          <button>
+            <EmojiHappyIcon className="h-7 w-7 rounded-full border p-1" />
+          </button>
+          <button>
+            <DotsVerticalIcon className="h-7 w-7 rounded-full border p-1" />
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

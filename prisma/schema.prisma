@@ -53,32 +53,35 @@ model User {
   rooms         Room[]
   creator       Room[]    @relation("creator")
   Message       Message[]
-  readRooms     Room[] @relation("readMembers")
+  readRooms     Room[]    @relation("readMembers")
 
 }
 
 model Message {
-  id       String   @id @default(cuid())
-  message  String?
-  roomId   String
-  sentAt   DateTime
-  senderId String
-  room     Room     @relation(fields: [roomId], references: [id])
-  sender   User     @relation(fields: [senderId], references: [id])
+  id                String    @id @default(cuid())
+  message           String?
+  roomId            String
+  sentAt            DateTime
+  senderId          String
+  messageToAnswerId String?
+  replies           Message[] @relation("replyMessage")
+  messageToAnswer   Message?  @relation("replyMessage", fields: [messageToAnswerId], references: [id])
+  room              Room      @relation(fields: [roomId], references: [id])
+  sender            User      @relation(fields: [senderId], references: [id])
 }
 
 model Room {
-  image         String?
-  readMembers   User[] @relation("readMembers")
-  lastModified  DateTime?
-  id            String    @id @default(cuid())
-  name          String
-  messages      Message[]
-  createdAt     DateTime
-  creatorId     String?
-  members       User[]
-  creator       User?      @relation("creator", fields: [creatorId], references: [id])
-  private       Boolean
+  image        String?
+  readMembers  User[]    @relation("readMembers")
+  lastModified DateTime?
+  id           String    @id @default(cuid())
+  name         String
+  messages     Message[]
+  createdAt    DateTime
+  creatorId    String?
+  members      User[]
+  creator      User?     @relation("creator", fields: [creatorId], references: [id])
+  private      Boolean
 
 }
 

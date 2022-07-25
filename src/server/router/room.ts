@@ -27,13 +27,15 @@ export const roomRouter = createRouter()
         sentAt: new Date(),
         senderId: ctx.session?.user?.id,
       }
-      const newMessage = await prisma.message.create({ data: message, include: { sender: true } });
+      let newMessage = await prisma.message.create({ data: message, include: { sender: true, messageToAnswer: true, replies: true } });
       const prismaRoom = await prisma.room.update({ include: { readMembers: true }, where: { id: input.roomId }, data: { lastModified: new Date() } })
       const user = await prisma.user.findFirst({ where: { id: ctx.session?.user.id } })
       if (user && prismaRoom) {
         const members = prismaRoom.readMembers.map((m) => ({ id: m.id }))
         await prisma.room.update({ include: { readMembers: true }, where: { id: prismaRoom.id }, data: { readMembers: { disconnect: members, connect: { id: user.id } } } })
       }
+      if (input.messageToReplyId !== "")
+        newMessage = await prisma.message.update({ where: { id: newMessage.id }, data: { messageToAnswerId: input.messageToReplyId }, include: { sender: true, messageToAnswer: true, replies: true } })
       ctx.ee.emit(Events.SEND_MESSAGE, newMessage);
       return newMessage
     },
@@ -63,7 +65,7 @@ export const roomRouter = createRouter()
   })
   .query("get-messages", {
     input: getMessagesSchema, resolve({ ctx, input }) {
-      return prisma.room.findFirst({ where: { id: input.roomId } }).messages({ include: { sender: true } });
+      return prisma.room.findFirst({ where: { id: input.roomId } }).messages({ include: { sender: true, replies: true, messageToAnswer: true } });
     }
   })
   .query("get-rooms", {

@@ -9,6 +9,8 @@ export const ContextProvider = ({ children }) => {
     refetch: refetchRooms,
   } = trpc.useQuery(["room.get-rooms"]);
   const [openNewRoomModal, setOpenNewRoomModal] = useState(false);
+  const [messageToReply, setMessageToReply] = useState(null);
+  const [focusInput, setFocusInput] = useState(false);
 
   return (
     <Context.Provider
@@ -19,6 +21,10 @@ export const ContextProvider = ({ children }) => {
         // State to open the add room modal
         openNewRoomModal,
         setOpenNewRoomModal,
+        messageToReply,
+        setMessageToReply,
+        focusInput,
+        setFocusInput,
       }}
     >
       {children}

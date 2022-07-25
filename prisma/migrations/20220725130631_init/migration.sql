@@ -45,7 +45,9 @@ CREATE TABLE "Message" (
     "roomId" TEXT NOT NULL,
     "sentAt" DATETIME NOT NULL,
     "senderId" TEXT NOT NULL,
+    "messageToAnswerId" TEXT,
     CONSTRAINT "Message_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "Message_messageToAnswerId_fkey" FOREIGN KEY ("messageToAnswerId") REFERENCES "Message" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT "Message_roomId_fkey" FOREIGN KEY ("roomId") REFERENCES "Room" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 

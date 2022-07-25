@@ -150,6 +150,9 @@ export default function Select({ people, selected, setSelected }) {
                 ) : (
                   <p className="p-2 text-gray-400">Loading...</p>
                 )}
+                {people && people.length === 0 && (
+                  <p className="p-2 text-gray-400">No friend :(</p>
+                )}
               </Listbox.Options>
             </Transition>
           </div>
