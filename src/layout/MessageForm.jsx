@@ -3,9 +3,15 @@ import {
   PaperAirplaneIcon,
   PaperClipIcon,
 } from "@heroicons/react/outline";
-const MessageForm = ({ sendMessageMutation, roomId, message, setMessage }) => {
+const MessageForm = ({
+  onFocus,
+  sendMessageMutation,
+  roomId,
+  message,
+  setMessage,
+}) => {
   return (
-    <div className="p-3 flex gap-4 items-center">
+    <div className="p-3 pt-0 flex gap-4 items-center bg-transparent">
       <button className="text-gray-500">
         <FolderOpenIcon className="h-6 w-6" />
       </button>
@@ -13,7 +19,7 @@ const MessageForm = ({ sendMessageMutation, roomId, message, setMessage }) => {
         <PaperClipIcon className="h-6 w-6" />
       </button>
       <form
-        className="flex flex-1"
+        className="flex flex-1 bg-transparent"
         onSubmit={(e) => {
           e.preventDefault();
           if (message === "") return;
@@ -26,7 +32,8 @@ const MessageForm = ({ sendMessageMutation, roomId, message, setMessage }) => {
         }}
       >
         <input
-          className="black rounded-full p-2.5 pl-3 w-full h-auto text-gray-500 bg-gray-50 border border-gray-200 focus: outline-green-600"
+          onFocus={onFocus}
+          className="black rounded-full p-2.5 pl-3 w-full h-auto text-gray-500 bg-gray-50 border border-gray-200 focus:outline-green-600 focus:outline-1"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Aa"

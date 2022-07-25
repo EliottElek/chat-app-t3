@@ -9,6 +9,7 @@ import MessageForm from "../../layout/MessageForm";
 import SlideOver from "../../components/SlideOver";
 import { Context } from "../../AppContext";
 import Modal from "../../components/Modal";
+import UserSelect from "../../layout/UserSelect";
 import {
   CheckIcon,
   EmojiHappyIcon,
@@ -16,6 +17,7 @@ import {
   DotsVerticalIcon,
 } from "@heroicons/react/outline";
 import { Dialog } from "@headlessui/react";
+import Avatar from "../../components/Avatar";
 function MessageItem({
   message,
   session,
@@ -41,17 +43,7 @@ function MessageItem({
         message.sender?.id === session?.user?.id && "self-end flex-row-reverse",
       ].join(" ")}
     >
-      {message.sender.image ? (
-        <img
-          className="h-8 w-8 rounded-full"
-          src={message.sender.image}
-          alt=""
-        />
-      ) : (
-        <span className="h-8 w-8 uppercase rounded-full bg-slate-200 flex items-center justify-center">
-          {message.sender.name ? message.sender.name[0] : "?"}
-        </span>
-      )}
+      <Avatar user={message.sender} size="8" />
       <li className={liStyles}>{message.message}</li>
       <span className="text-[0.6rem] text-slate-400 self-end">
         {message.sentAt.toLocaleTimeString("en-AU", {
@@ -100,7 +92,12 @@ function RoomPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const { refetchRooms } = useContext(Context);
   const [openModal, setOpenModal] = useState(false);
+  const [openAddMemberModal, setOpenAddMemberModal] = useState(false);
   const [modifMode, setModifMode] = useState("image");
+  const [selected, setSelected] = useState<any>(null);
+  const { mutateAsync: readRoomMutation } = trpc.useMutation([
+    "room.read-room",
+  ]);
   const { data, isLoading, refetch } = trpc.useQuery([
     "room.get-room",
     {
@@ -125,6 +122,7 @@ function RoomPage() {
       setMessages(messagesData);
     }
   }, [setMessages, messagesData, isLoadingMessagesData]);
+
   if (!isLoading && !data && typeof window !== "undefined") router.push("/404");
   const { mutateAsync: sendMessageMutation } = trpc.useMutation([
     "room.send-message",
@@ -135,6 +133,13 @@ function RoomPage() {
   const { mutateAsync: changeRoomNameMutation } = trpc.useMutation([
     "room.change-name-room",
   ]);
+  const { mutateAsync: addMemberMutation } = trpc.useMutation([
+    "room.add-member-room",
+  ]);
+  const readRoom = async () => {
+    await readRoomMutation({ roomId: roomId });
+    refetchRooms();
+  };
   trpc.useSubscription(
     [
       "room.onSendMessage",
@@ -171,6 +176,16 @@ function RoomPage() {
     refetchRooms();
     refetch();
   };
+  const handleAddMember = async () => {
+    if (!data || !selected) return;
+    await addMemberMutation({
+      roomId: data?.id,
+      memberId: selected.id,
+    });
+    setOpenAddMemberModal(false);
+    refetchRooms();
+    refetch();
+  };
   const NewMessageDivider = () => (
     <div className="relative">
       <div className="absolute inset-0 flex items-center" aria-hidden="true">
@@ -201,8 +216,11 @@ function RoomPage() {
   );
   if (!session && status !== "loading" && typeof window !== "undefined")
     signIn();
+  function classNames(...classes: string[]) {
+    return classes.filter(Boolean).join(" ");
+  }
   return (
-    <Layout title={data?.name} setOpenSlide={setOpenSlide}>
+    <Layout room={data} setOpenSlide={setOpenSlide}>
       {session && (
         <div className="flex flex-col flex-1 h-full ">
           <ul className="flex flex-col p-4 flex-1 overflow-auto gap-4">
@@ -226,6 +244,7 @@ function RoomPage() {
             ))}
           </ul>
           <MessageForm
+            onFocus={readRoom}
             sendMessageMutation={sendMessageMutation}
             roomId={roomId}
             message={message}
@@ -271,6 +290,34 @@ function RoomPage() {
           >
             Change room name
           </button>
+          <button
+            onClick={() => {
+              setOpenAddMemberModal(true);
+            }}
+            type="button"
+            className="mt-3 w-full flex grow flex-1 justify-center rounded-md border border-gray-300 px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:text-sm"
+          >
+            Add a new member
+          </button>
+          <h3 className="text-left w-full mt-3">Members</h3>
+          <div className="w-full flex flex-col gap-1">
+            {data?.members.map((member) => (
+              <div
+                key={member.id}
+                className="flex items-center bg-slate-100 w-full rounded-md p-1"
+              >
+                <Avatar user={member} size="6" />
+                <span
+                  className={classNames(
+                    selected ? "font-semibold" : "font-normal",
+                    "ml-3 block truncate"
+                  )}
+                >
+                  {member.name}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </SlideOver>
       <Modal
@@ -281,7 +328,7 @@ function RoomPage() {
         successBtnContent={"Go"}
       >
         <form
-          className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4"
+          className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 rounded-lg"
           onSubmit={
             modifMode === "image" ? handleChangeImage : handleChangeName
           }
@@ -328,8 +375,37 @@ function RoomPage() {
           />
         </form>
       </Modal>
+      <Modal
+        open={openAddMemberModal}
+        setOpen={setOpenAddMemberModal}
+        onSuccess={handleAddMember}
+        focusRef={inputRef}
+        successBtnContent={"Add member"}
+      >
+        <form
+          className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 rounded-lg"
+          onSubmit={handleAddMember}
+        >
+          <div className="sm:flex sm:items-start">
+            <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+              <Dialog.Title
+                as="h3"
+                className="text-lg leading-6 font-medium text-gray-900"
+              >
+                Add a new member
+              </Dialog.Title>
+              <div className="mt-2">
+                <p className="text-sm text-gray-500">
+                  You are about to add a new member
+                </p>
+                <p className="text-sm text-gray-500">Select the new member</p>
+              </div>
+            </div>
+          </div>
+          <UserSelect selected={selected} setSelected={setSelected} />
+        </form>
+      </Modal>
     </Layout>
   );
 }
-
 export default RoomPage;

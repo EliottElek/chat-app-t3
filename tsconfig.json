@@ -22,6 +22,6 @@
     "**/*.ts",
     "**/*.tsx",
     "**/*.js"
-, "src/layout/MessageForm.tsx", "src/pages/rooms/index.jsx", "src/layout/index.jsx", "src/components/SlideOver.jsx"  ],
+, "src/layout/MessageForm.tsx", "src/pages/rooms/index.jsx", "src/layout/index.jsx", "src/components/SlideOver.jsx", "src/layout/UserSelect.jsx"  ],
   "exclude": ["node_modules"]
 }
