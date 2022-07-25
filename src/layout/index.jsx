@@ -1,8 +1,13 @@
-import { Fragment, useRef, useState } from "react";
+import { Fragment, useContext, useEffect, useRef, useState } from "react";
 import { Dialog, Menu, Transition } from "@headlessui/react";
-import { BellIcon, MenuAlt2Icon, XIcon } from "@heroicons/react/outline";
+import {
+  BellIcon,
+  MenuAlt2Icon,
+  XIcon,
+  InformationCircleIcon,
+  CogIcon,
+} from "@heroicons/react/outline";
 import Modal from "../components/Modal";
-import { Props } from "next/script";
 import { trpc } from "../utils/trpc";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -12,35 +17,62 @@ const userNavigation = [
   { name: "Settings", href: "#" },
   { name: "Sign out", href: "#" },
 ];
-
-function classNames(...classes: string[]) {
+import { Context } from "../AppContext";
+function classNames(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
-const Layout: React.FC<Props> = ({ title, children }) => {
+const Layout = ({ title, children, setOpenSlide }) => {
   const { data: session } = useSession();
   const [roomName, setRoomName] = useState("");
-  const [open, setOpen] = useState(false);
+  const [emptyMessage, setEmptyMessage] = useState("");
+  const {
+    dataRooms,
+    isLoadingRooms,
+    refetchRooms,
+    openNewRoomModal,
+    setOpenNewRoomModal,
+  } = useContext(Context);
+  const { mutateAsync: readRoomMutation } = trpc.useMutation([
+    "room.read-room",
+  ]);
+  useEffect(() => {
+    if (refetchRooms) trpc.refetchRooms = refetchRooms;
+  }, [refetchRooms, trpc]);
   const inputRef = useRef(null);
 
   const { mutateAsync: createNewRoom } = trpc.useMutation([
     "room.create-new-room",
   ]);
 
-  async function createRoom() {
+  const readRoom = async (roomId) => {
+    await readRoomMutation({ roomId: roomId });
+    refetchRooms();
+  };
+  async function createRoom(e) {
+    e.preventDefault();
+    if (roomName === "") {
+      setEmptyMessage("The name cannot be empty.");
+      setTimeout(() => {
+        setEmptyMessage("");
+      }, 3000);
+      return;
+    }
     const newRoom = await createNewRoom({
       roomName,
     });
     if (newRoom) router.push(`/rooms/${newRoom.id}`);
     else alert("Could not create channel.");
+    refetchRooms();
+    setRoomName("");
+    setOpenNewRoomModal(false);
   }
   const router = useRouter();
-  const roomId = router.query.roomId as string;
+  const roomId = router.query.roomId;
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { data, isLoading } = trpc.useQuery(["room.get-rooms"]);
   return (
     <>
-      <div>
+      <div className="bg-[url('https://i.redd.it/qwd83nc4xxf41.jpg')] bg-contain">
         <Transition.Root show={sidebarOpen} as={Fragment}>
           <Dialog
             as="div"
@@ -94,18 +126,22 @@ const Layout: React.FC<Props> = ({ title, children }) => {
                     </div>
                   </Transition.Child>
                   <div className="flex-shrink-0 flex items-center px-4">
-                    <img
-                      className="h-8 w-auto"
-                      src="https://tailwindui.com/img/logos/workflow-logo-indigo-500-mark-white-text.svg"
-                      alt="Workflow"
-                    />
+                    <Link href="/">
+                      <a href="">
+                        <img
+                          className="h-8 w-auto"
+                          src="https://tailwindui.com/img/{logo}s/workflow-{logo}-indigo-500-mark-white-text.svg"
+                          alt="Workflow"
+                        />
+                      </a>
+                    </Link>
                   </div>
                   <div className="mt-5 flex-1 h-0 overflow-y-auto">
-                    {isLoading ? (
+                    {isLoadingRooms ? (
                       <p>Loading...</p>
                     ) : (
                       <nav className="px-2 space-y-1">
-                        {data?.map((item) => (
+                        {dataRooms?.map((item) => (
                           <Link key={item.id} href={`/rooms/${item.id}`}>
                             <a
                               className={classNames(
@@ -133,42 +169,97 @@ const Layout: React.FC<Props> = ({ title, children }) => {
         </Transition.Root>
 
         {/* Static sidebar for desktop */}
-        <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
+        <div className="hidden md:flex md:w-72 md:flex-col md:fixed md:inset-y-0">
           {/* Sidebar component, swap this element with another sidebar if you like */}
-          <div className="flex-1 flex flex-col min-h-0 bg-gray-800">
-            <div className="flex items-center h-16 flex-shrink-0 px-4 bg-gray-900">
-              {/* <img
-                className="h-8 w-auto"
-                src="https://tailwindui.com/img/logos/workflow-logo-indigo-500-mark-white-text.svg"
-                alt="Workflow"
-              /> */}
+          <div className="flex-1 flex flex-col min-h-0 bg-white bg-opacity-20 backdrop-blur-lg border-r">
+            <div className="flex items-center h-16 flex-shrink-0 px-4">
+              <Link href="/rooms">
+                <a>
+                  <img
+                    className="h-11 w-auto brightness-95"
+                    src={"/logo.png"}
+                    alt="Workflow"
+                  />
+                </a>
+              </Link>
             </div>
             <div className="flex-1 flex flex-col overflow-y-auto">
-              {isLoading ? (
+              {isLoadingRooms ? (
                 <p>Loading...</p>
               ) : (
-                <nav className="flex-1 px-2 py-4 space-y-1 w-full">
-                  <div className="flex w-full items-center justify-center">
+                <nav className="flex-1  py-4 space-y-1 w-full">
+                  <div className="flex w-full items-center justify-center sticky top-0 bg-white opacity-100 z-50 rounded-md">
                     <button
-                      onClick={() => setOpen(true)}
+                      onClick={() => setOpenNewRoomModal(true)}
                       type="button"
-                      className="mt-3 flex grow flex-1 justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:text-sm"
+                      className="mt-3 flex grow flex-1 justify-center rounded-md border border-gray-300 px-4 py-2  text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:text-sm"
                     >
                       New chat room
                     </button>
                   </div>
-                  {data?.map((item) => (
+                  {dataRooms?.map((item) => (
                     <Link key={item.id} href={`/rooms/${item.id}`}>
                       <a
+                        onClick={() => readRoom(item.id)}
                         className={classNames(
                           roomId === item.id
-                            ? "bg-gray-700 text-white"
-                            : "bg-transparent text-gray-300",
-                          "hover:bg-gray-700 hover:text-white",
-                          "group flex items-center px-2 py-2 text-base font-medium rounded-md"
+                            ? "bg-white text-gray-700 border-l-green-400"
+                            : "bg-transparent text-gray-700",
+                          "hover:bg-white hover:text-gray-700 border-l-transparent",
+                          "group flex items-center justify-between border-l-[5px] px-4 py-2 text-base font-medium w-full gap-3 relative"
                         )}
                       >
-                        {item.name}
+                        <div className="flex items-center gap-2 w-full">
+                          {item.image ? (
+                            <img
+                              className="h-9 w-9 rounded-full"
+                              src={item.image}
+                              alt=""
+                            />
+                          ) : (
+                            <div>
+                              <div className="h-9 w-9 uppercase rounded-full bg-slate-200 flex items-center gap-2 justify-center">
+                                {item.name ? item.name[0] : "?"}
+                              </div>
+                            </div>
+                          )}
+                          <span className="flex truncate flex-col max-w-full">
+                            <span
+                              className={[
+                                "truncate max-w-full",
+                                item.readMembers.findIndex(
+                                  (i) => i.id === session.user?.id
+                                ) === -1
+                                  ? "font-bold"
+                                  : "font-normal",
+                              ].join(" ")}
+                            >
+                              {item.name}
+                            </span>
+                            {item.messages[0] && (
+                              <span
+                                className={[
+                                  "flex items-center gap-2 w-full truncate",
+                                  item.readMembers.findIndex(
+                                    (i) => i.id === session.user?.id
+                                  ) === -1
+                                    ? "font-bold"
+                                    : "font-normal text-slate-400",
+                                ].join(" ")}
+                              >
+                                <span className="text-sm truncate  max-w-full">
+                                  {item.messages[0]?.sender?.name.split(".")[0]}{" "}
+                                  : {item.messages[0]?.message}
+                                </span>
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <span className="text-xs absolute self-end	text-slate-400 font-light top-3 right-4">
+                          {item?.lastModified?.toLocaleTimeString("en-AU", {
+                            timeStyle: "short",
+                          })}
+                        </span>
                       </a>
                     </Link>
                   ))}
@@ -177,11 +268,11 @@ const Layout: React.FC<Props> = ({ title, children }) => {
             </div>
           </div>
         </div>
-        <div className="md:pl-64 flex flex-col h-screen flex-1">
-          <div className="sticky top-0 z-10 flex-shrink-0 flex h-16 bg-white shadow">
+        <div className="md:pl-72 flex flex-col h-screen flex-1">
+          <div className="sticky top-0 z-10 flex-shrink-0 flex h-14 bg-white bg-opacity-20 backdrop-blur-lg border-b">
             <button
               type="button"
-              className="px-4 border-r border-gray-200 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 md:hidden"
+              className="px-4 border-r border-gray-200 text-gray-500 focus:outline-none md:hidden"
               onClick={() => setSidebarOpen(true)}
             >
               <span className="sr-only">Open sidebar</span>
@@ -189,17 +280,38 @@ const Layout: React.FC<Props> = ({ title, children }) => {
             </button>
             <div className="flex-1 px-4 flex justify-between">
               <div className="flex-1 flex">
-                <h1 className={"h-full text-xl flex items-center"}>{title}</h1>
+                <h1
+                  className={"h-full text-xl font-semibold flex items-center"}
+                >
+                  {title}
+                </h1>
               </div>
-              <div className="ml-4 flex items-center md:ml-6">
+              <div className="ml-4 flex items-center md:ml-6 gap-2">
                 <button
                   type="button"
-                  className="bg-white p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className=" p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none"
                 >
                   <span className="sr-only">View notifications</span>
                   <BellIcon className="h-6 w-6" aria-hidden="true" />
                 </button>
-
+                <button
+                  type="button"
+                  className=" p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none"
+                >
+                  <span className="sr-only">View infos</span>
+                  <InformationCircleIcon
+                    className="h-6 w-6"
+                    aria-hidden="true"
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOpenSlide(true)}
+                  className=" p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none"
+                >
+                  <span className="sr-only">Open slide-over</span>
+                  <CogIcon className="h-6 w-6" aria-hidden="true" />
+                </button>
                 {/* Profile dropdown */}
                 <Menu as="div" className="ml-3 relative">
                   <div>
@@ -253,13 +365,16 @@ const Layout: React.FC<Props> = ({ title, children }) => {
         </div>
       </div>
       <Modal
-        open={open}
-        setOpen={setOpen}
+        open={openNewRoomModal}
+        setOpen={setOpenNewRoomModal}
         onSuccess={createRoom}
         focusRef={inputRef}
         successBtnContent={"Create channel"}
       >
-        <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <form
+          className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4"
+          onSubmit={createRoom}
+        >
           <div className="sm:flex sm:items-start">
             <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
               <Dialog.Title
@@ -287,7 +402,10 @@ const Layout: React.FC<Props> = ({ title, children }) => {
             className="focus:ring-indigo-500 border focus:border-indigo-500 block w-full p-4 mt-4 sm:text-sm border-gray-300 rounded-md"
             placeholder="The name of the chat room..."
           />
-        </div>
+          {emptyMessage !== "" && (
+            <span className="text-xs text-red-500 pl-1">{emptyMessage}</span>
+          )}
+        </form>
       </Modal>
     </>
   );

@@ -6,6 +6,8 @@ import {
   sendMessageSchema,
   getMessagesSchema,
   createRoomShema,
+  changeImageRoomSchema,
+  changeNameRoomSchema
 } from "../../constants/schemas";
 import { Events } from "../../constants/events";
 import * as trpc from "@trpc/server";
@@ -15,6 +17,7 @@ export const roomRouter = createRouter()
   .mutation("send-message", {
     input: sendMessageSchema,
     async resolve({ ctx, input }) {
+      if (!ctx.session || !ctx.session.user) return;
       const room = await prisma.room.findFirst({ where: { id: input.roomId } })
       const message: Message = {
         id: randomUUID(),
@@ -23,14 +26,15 @@ export const roomRouter = createRouter()
         sentAt: new Date(),
         senderId: ctx.session?.user?.id,
       }
-      await prisma.message.create({ data: message });
-      ctx.ee.emit(Events.SEND_MESSAGE, message);
-      return {
-        ...message, sender: {
-          name: ctx.session?.user?.name || "Paul",
-          id: ctx.session?.user?.id || "Dfkdflsd",
-        }
-      };
+      const newMessage = await prisma.message.create({ data: message, include: { sender: true } });
+      const prismaRoom = await prisma.room.update({ include: { readMembers: true }, where: { id: input.roomId }, data: { lastModified: new Date() } })
+      const user = await prisma.user.findFirst({ where: { id: ctx.session?.user.id } })
+      if (user && prismaRoom) {
+        const members = prismaRoom.readMembers.map((m) => ({ id: m.id }))
+        await prisma.room.update({ include: { readMembers: true }, where: { id: prismaRoom.id }, data: { readMembers: { disconnect: members, connect: { id: user.id } } } })
+      }
+      ctx.ee.emit(Events.SEND_MESSAGE, newMessage);
+      return newMessage
     },
   })
   .mutation("create-new-room", {
@@ -43,32 +47,78 @@ export const roomRouter = createRouter()
   })
   .query("get-room", {
     input: getMessagesSchema, resolve({ ctx, input }) {
-      return prisma.room.findFirst({ where: { id: input.roomId } });
+      return prisma.room.findFirst({
+        where: { id: input.roomId }, include: {
+          readMembers: true,
+        }
+      });
     }
   })
   .query("get-messages", {
     input: getMessagesSchema, resolve({ ctx, input }) {
-      return prisma.room.findFirst({ where: { id: input.roomId } }).messages();
+      return prisma.room.findFirst({ where: { id: input.roomId } }).messages({ include: { sender: true } });
     }
   })
   .query("get-rooms", {
     async resolve({ ctx }) {
       if (ctx.session && ctx.session.user) {
         // return await prisma.user.findFirst({ where: { name: ctx.session.user.id } }).rooms();
-        return await prisma.room.findMany()
+        const room = await prisma.room.findMany({
+          orderBy: {
+            lastModified: 'desc'
+          },
+          include: {
+            readMembers: true,
+            messages: {
+              orderBy: {
+                sentAt: 'desc',
+              },
+              include: {
+                sender: true
+              },
+              take: 1,
+
+            }
+          },
+        })
+        return room
       }
+    }
+  })
+  .mutation("read-room", {
+    input: getMessagesSchema, async resolve({ ctx, input }) {
+      if (!ctx.session || !ctx.session.user) return;
+      const room = await prisma.room.findFirst({ where: { id: input.roomId }, include: { readMembers: true } })
+      const user = await prisma.user.findFirst({ where: { id: ctx.session?.user.id } })
+      if (room && user) {
+        room.readMembers.push(user)
+        const members = room.readMembers.map((m) => ({ id: m.id }))
+        await prisma.room.update({ include: { readMembers: true }, where: { id: input.roomId }, data: { readMembers: { connect: members } } })
+      }
+    }
+  })
+  .mutation("change-image-room", {
+    input: changeImageRoomSchema, async resolve({ ctx, input }) {
+      if (!ctx.session || !ctx.session.user) return;
+      await prisma.room.update({ where: { id: input.roomId }, data: { image: input.image } })
+    }
+  })
+  .mutation("change-name-room", {
+    input: changeNameRoomSchema, async resolve({ ctx, input }) {
+      if (!ctx.session || !ctx.session.user) return;
+      await prisma.room.update({ where: { id: input.roomId }, data: { name: input.name } })
     }
   })
   .subscription("onSendMessage", {
     input: messageSubSchema,
-    resolve({ ctx, input }) {
+    async resolve({ ctx, input }) {
+
       return new trpc.Subscription<Message>((emit) => {
-        function onMessage(data: Message) {
+        async function onMessage(data: Message) {
           if (input.roomId === data.roomId) {
             emit.data(data);
           }
         }
-
         ctx.ee.on(Events.SEND_MESSAGE, onMessage);
 
         return () => {

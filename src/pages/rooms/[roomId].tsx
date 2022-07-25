@@ -1,41 +1,90 @@
 import { Session } from "next-auth";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
-import { Message } from "../../constants/schemas";
+import { useContext, useEffect, useRef, useState } from "react";
+import { Message, Room } from "../../constants/schemas";
 import Layout from "../../layout";
 import { trpc } from "../../utils/trpc";
 import MessageForm from "../../layout/MessageForm";
+import SlideOver from "../../components/SlideOver";
+import { Context } from "../../AppContext";
+import Modal from "../../components/Modal";
+import {
+  CheckIcon,
+  EmojiHappyIcon,
+  ReplyIcon,
+  DotsVerticalIcon,
+} from "@heroicons/react/outline";
+import { Dialog } from "@headlessui/react";
 function MessageItem({
   message,
   session,
+  room,
+  last,
 }: {
   message: Message;
   session: Session;
+  room: Room;
+  last: boolean;
 }) {
   const baseStyles =
-    "text-md max-w-[60%] p-2 text-gray-700 border border-gray-200 rounded-xl";
+    "text-md max-w-[60%] p-2 border border-gray-200 rounded-lg shadow-sm text-gray-600 ";
 
   const liStyles =
-    message.sender?.id === session.user?.id
-      ? baseStyles
-      : baseStyles.concat("self-end bg-gray-700 text-slate-100 rounded-xl");
+    message.sender?.id === session?.user?.id
+      ? baseStyles.concat("bg-green-200")
+      : baseStyles.concat("self-end bg-white rounded-lg");
   return (
     <div
       className={[
-        "flex gap-2",
-        message.sender?.id === session.user?.id && "self-end flex-row-reverse",
+        "flex gap-1 w-full relative group",
+        message.sender?.id === session?.user?.id && "self-end flex-row-reverse",
       ].join(" ")}
     >
-      <span className="flex justify-center items-center h-10 w-10 rounded-full ring-1 ring-gray-200">
-        {message.sender?.name[0]}
-      </span>
+      {message.sender.image ? (
+        <img
+          className="h-8 w-8 rounded-full"
+          src={message.sender.image}
+          alt=""
+        />
+      ) : (
+        <span className="h-8 w-8 uppercase rounded-full bg-slate-200 flex items-center justify-center">
+          {message.sender.name ? message.sender.name[0] : "?"}
+        </span>
+      )}
       <li className={liStyles}>{message.message}</li>
-      <span className="text-xs text-slate-400 self-center">
+      <span className="text-[0.6rem] text-slate-400 self-end">
         {message.sentAt.toLocaleTimeString("en-AU", {
           timeStyle: "short",
         })}
       </span>
+      {last &&
+        message.sender?.id === session?.user?.id &&
+        room?.readMembers.length > 1 && (
+          <span className="flex -gap-4 absolute -bottom-2 right-2 text-sky-500">
+            <CheckIcon className="h-4 w-4" />
+            <CheckIcon className="-ml-2 h-4 w-4" />
+          </span>
+        )}
+      <div
+        className={[
+          "opacity-0 p-2 py-4 flex h-7 items-center gap-3 rounded-xl  bg-white text-gray-400 group-hover:opacity-100 transition-all delay-75 self-center -mt-4",
+          ,
+          message.sender?.id === session?.user?.id
+            ? "-mr-10"
+            : "-ml-10 flex-row-reverse",
+        ].join(" ")}
+      >
+        <button>
+          <ReplyIcon className="h-7 w-7 rounded-full border p-1" />
+        </button>
+        <button>
+          <EmojiHappyIcon className="h-7 w-7 rounded-full border p-1" />
+        </button>
+        <button>
+          <DotsVerticalIcon className="h-7 w-7 rounded-full border p-1" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -44,11 +93,15 @@ function RoomPage() {
   const router = useRouter();
   const roomId = router.query.roomId as string;
   const { data: session, status } = useSession();
-
   const [message, setMessage] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [nameInput, setNameInput] = useState("");
+  const [openSlide, setOpenSlide] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-
-  const { data, isLoading } = trpc.useQuery([
+  const { refetchRooms } = useContext(Context);
+  const [openModal, setOpenModal] = useState(false);
+  const [modifMode, setModifMode] = useState("image");
+  const { data, isLoading, refetch } = trpc.useQuery([
     "room.get-room",
     {
       roomId,
@@ -62,6 +115,12 @@ function RoomPage() {
       },
     ]);
   useEffect(() => {
+    if (data) {
+      setImageUrl(data?.image || "");
+      setNameInput(data?.name || "");
+    }
+  }, [data, setNameInput, setImageUrl, data?.image, data?.name]);
+  useEffect(() => {
     if (messagesData && !isLoadingMessagesData) {
       setMessages(messagesData);
     }
@@ -70,7 +129,12 @@ function RoomPage() {
   const { mutateAsync: sendMessageMutation } = trpc.useMutation([
     "room.send-message",
   ]);
-
+  const { mutateAsync: changeRoomImageMutation } = trpc.useMutation([
+    "room.change-image-room",
+  ]);
+  const { mutateAsync: changeRoomNameMutation } = trpc.useMutation([
+    "room.change-name-room",
+  ]);
   trpc.useSubscription(
     [
       "room.onSendMessage",
@@ -83,20 +147,83 @@ function RoomPage() {
         setMessages((m) => {
           return [...m, message];
         });
+        refetchRooms();
       },
     }
   );
-
+  const handleChangeImage = async () => {
+    if (imageUrl === "" || !data) return;
+    await changeRoomImageMutation({
+      roomId: data?.id,
+      image: imageUrl,
+    });
+    setOpenModal(false);
+    refetchRooms();
+    refetch();
+  };
+  const handleChangeName = async () => {
+    if (nameInput === "" || !data) return;
+    await changeRoomNameMutation({
+      roomId: data?.id,
+      name: nameInput,
+    });
+    setOpenModal(false);
+    refetchRooms();
+    refetch();
+  };
+  const NewMessageDivider = () => (
+    <div className="relative">
+      <div className="absolute inset-0 flex items-center" aria-hidden="true">
+        <div className="w-full border-t border-red-400" />
+      </div>
+      <div className="relative flex justify-center">
+        <span className="px-2 py-0 bg-white text-sm border-red-400  border text-red-400 rounded-xl">
+          New message !
+        </span>
+      </div>
+    </div>
+  );
+  interface Props {
+    date?: String;
+  }
+  const inputRef = useRef(null);
+  const DateDivider = ({ date }: Props) => (
+    <div className="relative mb-2">
+      <div className="absolute inset-0 flex items-center" aria-hidden="true">
+        <div className="w-full border-t border-gray-300" />
+      </div>
+      <div className="relative flex justify-center">
+        <span className="px-2 py-0 bg-white text-xs  border text-gray-400 rounded-xl">
+          {date}
+        </span>
+      </div>
+    </div>
+  );
   if (!session && status !== "loading" && typeof window !== "undefined")
     signIn();
   return (
-    <Layout title={data?.name}>
+    <Layout title={data?.name} setOpenSlide={setOpenSlide}>
       {session && (
         <div className="flex flex-col flex-1 h-full ">
           <ul className="flex flex-col p-4 flex-1 overflow-auto gap-4">
-            {messages.map((m) => {
-              return <MessageItem key={m.id} message={m} session={session} />;
-            })}
+            {messages.map((m, i) => (
+              <div key={m.id}>
+                {messages[i - 1] &&
+                  (m.sentAt - messages[i - 1].sentAt) / 6000 > 100 && (
+                    <DateDivider
+                      date={m.sentAt.toLocaleTimeString("en-AU", {
+                        timeStyle: "short",
+                      })}
+                    />
+                  )}
+                <MessageItem
+                  last={i === messages.length - 1}
+                  room={data}
+                  message={m}
+                  session={session}
+                />
+              </div>
+            ))}
           </ul>
           <MessageForm
             sendMessageMutation={sendMessageMutation}
@@ -106,6 +233,101 @@ function RoomPage() {
           />
         </div>
       )}
+      <SlideOver open={openSlide} setOpen={setOpenSlide}>
+        <div className="flex flex-col items-center gap-1">
+          {data?.image ? (
+            <div>
+              <img
+                className="h-[150px] object-cover border w-[150px] rounded-full"
+                src={data.image}
+                alt=""
+              />
+            </div>
+          ) : (
+            <div>
+              <div className="h-[150px] border w-[150px] text-[4rem] uppercase rounded-full bg-slate-200 flex items-center gap-2 justify-center">
+                {data?.name ? data?.name[0] : "?"}
+              </div>
+            </div>
+          )}
+          <h1 className="text-2xl mb-4">{data?.name}</h1>
+          <button
+            onClick={() => {
+              setOpenModal(true);
+              setModifMode("image");
+            }}
+            type="button"
+            className="mt-3 flex w-full grow flex-1 justify-center rounded-md border border-gray-300 px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:text-sm"
+          >
+            {data?.image ? "Change room picture" : "Add a room image"}
+          </button>
+          <button
+            onClick={() => {
+              setOpenModal(true);
+              setModifMode("name");
+            }}
+            type="button"
+            className="mt-3 w-full flex grow flex-1 justify-center rounded-md border border-gray-300 px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:text-sm"
+          >
+            Change room name
+          </button>
+        </div>
+      </SlideOver>
+      <Modal
+        open={openModal}
+        setOpen={setOpenModal}
+        onSuccess={modifMode === "image" ? handleChangeImage : handleChangeName}
+        focusRef={inputRef}
+        successBtnContent={"Go"}
+      >
+        <form
+          className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4"
+          onSubmit={
+            modifMode === "image" ? handleChangeImage : handleChangeName
+          }
+        >
+          <div className="sm:flex sm:items-start">
+            <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+              <Dialog.Title
+                as="h3"
+                className="text-lg leading-6 font-medium text-gray-900"
+              >
+                {modifMode === "image"
+                  ? "Change room image"
+                  : "Change room name"}
+              </Dialog.Title>
+              <div className="mt-2">
+                <p className="text-sm text-gray-500">
+                  You are about to{" "}
+                  {modifMode === "image"
+                    ? "change the room picture."
+                    : "change the room name."}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {modifMode === "image"
+                    ? "Enter the url of the image below."
+                    : "Enter the new name below."}
+                </p>
+              </div>
+            </div>
+          </div>
+          <input
+            type="text"
+            autoFocus
+            ref={inputRef}
+            value={modifMode === "image" ? imageUrl : nameInput}
+            onChange={
+              modifMode === "image"
+                ? (e) => setImageUrl(e.target.value)
+                : (e) => setNameInput(e.target.value)
+            }
+            className="focus:ring-indigo-500 border focus:border-indigo-500 block w-full p-4 mt-4 sm:text-sm border-gray-300 rounded-md"
+            placeholder={
+              modifMode === "image" ? "New image url..." : "New name..."
+            }
+          />
+        </form>
+      </Modal>
     </Layout>
   );
 }

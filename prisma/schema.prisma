@@ -53,6 +53,8 @@ model User {
   rooms         Room[]
   creator       Room[]    @relation("creator")
   Message       Message[]
+  readRooms     Room[] @relation("readMembers")
+
 }
 
 model Message {
@@ -66,14 +68,18 @@ model Message {
 }
 
 model Room {
-  id        String    @id @default(cuid())
-  name      String
-  messages  Message[]
-  createdAt DateTime
-  creatorId String?
-  members   User[]
-  creator   User?      @relation("creator", fields: [creatorId], references: [id])
-  private   Boolean
+  image         String?
+  readMembers   User[] @relation("readMembers")
+  lastModified  DateTime?
+  id            String    @id @default(cuid())
+  name          String
+  messages      Message[]
+  createdAt     DateTime
+  creatorId     String?
+  members       User[]
+  creator       User?      @relation("creator", fields: [creatorId], references: [id])
+  private       Boolean
+
 }
 
 model VerificationToken {

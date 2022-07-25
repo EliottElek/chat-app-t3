@@ -8,8 +8,8 @@ export const sendMessageSchema = z.object({
 export let accountSchema: any = {};
 export let sessionSchema: any = {};
 export let messageSchema: any = {};
+export let roomSchema: any = {};
 export let userSchema: any = {};
-
 userSchema = z.object({
     id: z.string(),
     name: z.string(),
@@ -44,7 +44,30 @@ messageSchema = z.object({
     sender: userSchema
 });
 
+// readMembers   User[] @relation("readMembers")
+//   lastModified  DateTime?
+//   id            String    @id @default(cuid())
+//   name          String
+//   messages      Message[]
+//   createdAt     DateTime
+//   creatorId     String?
+//   members       User[]
+//   creator       User?      @relation("creator", fields: [creatorId], references: [id])
+//   private  
+roomSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    messages: z.array(messageSchema),
+    members: z.array(userSchema),
+    readMembers: z.array(userSchema),
+    createdAt: z.date(),
+    lastModified: z.date(),
+    private: z.boolean(),
+    creator: userSchema
+});
 export type Message = z.TypeOf<typeof messageSchema>;
+export type Room = z.TypeOf<typeof roomSchema>;
+
 
 export const messageSubSchema = z.object({
     roomId: z.string(),
@@ -59,4 +82,12 @@ export const signInSchema = z.object({
     name: z.string(),
     email: z.string(),
     image: z.string(),
+});
+export const changeImageRoomSchema = z.object({
+    roomId: z.string(),
+    image: z.string(),
+});
+export const changeNameRoomSchema = z.object({
+    roomId: z.string(),
+    name: z.string(),
 });

@@ -8,6 +8,7 @@ import { SessionProvider } from "next-auth/react";
 import "../styles/globals.css";
 import { createWSClient, wsLink } from "@trpc/client/links/wsLink";
 import { httpBatchLink } from "@trpc/client/links/httpBatchLink";
+import { ContextProvider } from "../AppContext";
 
 const MyApp: AppType = ({
   Component,
@@ -15,7 +16,9 @@ const MyApp: AppType = ({
 }) => {
   return (
     <SessionProvider session={session}>
-      <Component {...pageProps} />
+      <ContextProvider>
+        <Component {...pageProps} />
+      </ContextProvider>
     </SessionProvider>
   );
 };
