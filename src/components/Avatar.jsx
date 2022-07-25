@@ -15,15 +15,17 @@ const Avatar = ({ user, size }) => {
   return (
     <div>
       {user.image ? (
-        <img
-          className={`h-${size} w-${size} rounded-full`}
-          src={user.image}
-          alt=""
-        />
+        <div className="h-9 w-9">
+          <img
+            className={`h-9 w-9 rounded-full border`}
+            src={user.image}
+            alt=""
+          />
+        </div>
       ) : (
-        <div>
+        <div className="h-9 w-9">
           <div
-            className={`h-9 w-9 uppercase rounded-full bg-slate-200 flex items-center gap-2 justify-center`}
+            className={`h-9 w-9 uppercase rounded-full bg-slate-200 flex items-center gap-2 justify-center border`}
           >
             {user.name ? user.name[0] : "?"}
           </div>

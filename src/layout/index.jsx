@@ -216,10 +216,10 @@ const Layout = ({ room, children, setOpenSlide }) => {
                         onClick={() => readRoom(item.id)}
                         className={classNames(
                           roomId === item.id
-                            ? "bg-white text-gray-700 border-l-green-400"
+                            ? "bg-white text-gray-700"
                             : "bg-transparent text-gray-700",
-                          "hover:bg-white hover:text-gray-700 border-l-transparent",
-                          "group flex items-center justify-between border-l-[5px] px-4 py-2 text-base font-medium w-full gap-3 relative"
+                          "hover:bg-white hover:text-gray-700",
+                          "group flex items-center justify-between px-4 py-2 text-base font-medium w-full gap-3 relative"
                         )}
                       >
                         <div className="flex items-center gap-2 w-full">
@@ -288,7 +288,7 @@ const Layout = ({ room, children, setOpenSlide }) => {
                 </h1>
                 <ul className="flex ml-2 items-center pt-1">
                   {room?.members?.map((member, i) => (
-                    <li key={member.id} className="text-xs text-gray-500">
+                    <li key={member.id} className="text-xs text-gray-400">
                       {member.name}
                       {i !== room.members.length - 1 && <span>,&nbsp;</span>}
                     </li>
