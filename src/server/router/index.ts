@@ -8,11 +8,13 @@ if (!global.fetch) {
 }
 
 import { roomRouter } from "./room";
+import { messageRouter } from "./message";
 import { userRouter } from "./user";
 
 export const appRouter = createRouter()
   .transformer(superjson)
   .merge("room.", roomRouter)
+  .merge("message.", messageRouter)
   .merge("user.", userRouter);
 
 

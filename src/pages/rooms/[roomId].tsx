@@ -1,7 +1,13 @@
 import { Session } from "next-auth";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/router";
-import { useContext, useEffect, useRef, useState } from "react";
+import React, {
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  Fragment,
+} from "react";
 import { Message, Room } from "../../constants/schemas";
 import Layout from "../../layout";
 import { trpc } from "../../utils/trpc";
@@ -16,13 +22,17 @@ import {
   ReplyIcon,
   DotsVerticalIcon,
 } from "@heroicons/react/outline";
-import { Dialog } from "@headlessui/react";
+import { useTimeoutFn } from "react-use";
+import { Dialog, Transition, Menu } from "@headlessui/react";
+import MenuComp from "../../components/Menu";
 import Avatar from "../../components/Avatar";
+import computeReactions from "../../utils/computeReactions";
 function MessageItem({
   message,
   session,
   room,
   last,
+  refetchMessages,
   //Boolean to know if previous message is from the same sender
   isFollowed,
 }: {
@@ -31,11 +41,24 @@ function MessageItem({
   room: Room;
   last: boolean;
   isFollowed: boolean;
+  refetchMessages: any;
 }) {
-  const { setMessageToReply, setFocusInput } = useContext(Context);
+  const { setMessageToReply, setFocusInput, setToastContent, setOpenToast } =
+    useContext(Context);
+  let [isShowing, setIsShowing] = useState(true);
+  let [, , resetIsShowing] = useTimeoutFn(() => setIsShowing(true), 100);
+  const { mutateAsync: reactToMessage } = trpc.useMutation([
+    "message.add-reaction-message",
+  ]);
   const baseStyles =
-    "text-md max-w-[60%] p-2 border border-gray-200 rounded-lg shadow-sm text-gray-600 ";
+    "text-md max-w-[60%] p-2 border border-gray-200 rounded-lg shadow-sm text-gray-600 relative ";
 
+  const reactions = [
+    { label: "hearted-eyes", reaction: "😍" },
+    { label: "red-heart", reaction: "❤️" },
+    { label: "funny-tear-eyes", reaction: "😂" },
+    { label: "star-eyes", reaction: "🤩" },
+  ];
   const liStyles =
     message.sender?.id === session?.user?.id
       ? baseStyles.concat("bg-green-200")
@@ -45,6 +68,36 @@ function MessageItem({
     setMessageToReply(message);
     setTimeout(() => setFocusInput(true), 200);
   };
+  const handleReactToMessage = async (react: any) => {
+    await reactToMessage({ messageId: message.id, reaction: react });
+    refetchMessages();
+    setIsShowing(false);
+    resetIsShowing();
+  };
+  trpc.useSubscription(
+    [
+      "message.onMessageReact",
+      {
+        messageId: message.id,
+      },
+    ],
+    {
+      onNext: (reaction) => {
+        setToastContent({
+          title: `${reaction?.user?.name} reacted : "${reaction.reaction}"`,
+          image: message?.room?.image
+            ? message?.room?.image
+            : reaction?.user?.image,
+          content: `to :"${message.message}"`,
+          messageToReply: message,
+        });
+        setOpenToast(true);
+        refetchMessages();
+        setIsShowing(false);
+        resetIsShowing();
+      },
+    }
+  );
   return (
     <>
       {message.messageToAnswer && (
@@ -82,7 +135,84 @@ function MessageItem({
           <Avatar user={message.sender} size="8" />
         </div>
 
-        <li className={liStyles}>{message.message}</li>
+        <li className={liStyles}>
+          {message.message}
+          {message?.reactions?.length !== 0 && (
+            <Menu as="div" className="">
+              <Menu.Button
+                className={[
+                  "cursor-pointer absolute z-10  px-1 gap-1 items-center bg-opacity-40 bg-gray-400 rounded-full",
+                  message.sender?.id === session?.user?.id
+                    ? "right-0"
+                    : "left-0",
+                ].join(" ")}
+              >
+                <span className="flex gap-2">
+                  {computeReactions(message)?.map(
+                    (
+                      react: {
+                        reaction: string;
+                        label: string;
+                        reactors: [{ name: string }];
+                      },
+                      i
+                    ) => (
+                      <Transition
+                        key={i}
+                        as={Fragment}
+                        show={isShowing}
+                        enter="transform transition duration-[400ms]"
+                        enterFrom="opacity-0 rotate-[-120deg] scale-[3.7]"
+                        enterTo="opacity-100 rotate-0 scale-100"
+                        leave="transform duration-200 transition ease-in-out"
+                        leaveFrom="opacity-100 rotate-0 scale-100 "
+                        leaveTo="opacity-0 scale-95 "
+                      >
+                        <span className="text-gray-500 flex">
+                          {react.reactors.length > 1 && react.reactors.length}
+                          {react.reaction}
+                        </span>
+                      </Transition>
+                    )
+                  )}
+                </span>
+              </Menu.Button>
+              <Transition
+                as={Fragment}
+                enter="transition ease-out duration-100"
+                enterFrom="transform opacity-0 scale-95"
+                enterTo="transform opacity-100 scale-100"
+                leave="transition ease-in duration-75"
+                leaveFrom="transform opacity-100 scale-100"
+                leaveTo="transform opacity-0 scale-95"
+              >
+                <Menu.Items className="z-50 p-2 absolute flex flex-col gap-2 -left-1/2 top-8 divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                  {computeReactions(message)?.map(
+                    (
+                      react: {
+                        reaction: string;
+                        label: string;
+                        reactors: [{ name: string }];
+                      },
+                      i
+                    ) => (
+                      <Menu.Item key={i}>
+                        <p className="cursor-default">
+                          {react.reaction}:
+                          <span className="truncate">
+                            {react.reactors
+                              .map((reactor) => reactor.name)
+                              .join(", ")}
+                          </span>
+                        </p>
+                      </Menu.Item>
+                    )
+                  )}
+                </Menu.Items>
+              </Transition>
+            </Menu>
+          )}
+        </li>
         <span className="text-[0.6rem] text-slate-400 self-end">
           {message.sentAt.toLocaleTimeString("en-AU", {
             timeStyle: "short",
@@ -108,9 +238,23 @@ function MessageItem({
           <button onClick={handleAnswerMessage}>
             <ReplyIcon className="h-7 w-7 rounded-full border p-1" />
           </button>
-          <button>
-            <EmojiHappyIcon className="h-7 w-7 rounded-full border p-1" />
-          </button>
+          <MenuComp
+            defaultItem={
+              <div>
+                <EmojiHappyIcon className="h-7 w-7 rounded-full border p-1" />
+              </div>
+            }
+          >
+            {reactions.map((react, i) => (
+              <button
+                key={i}
+                onClick={() => handleReactToMessage(react)}
+                className="h10 w-10 text-2xl p-0 m-0"
+              >
+                {react.reaction}
+              </button>
+            ))}
+          </MenuComp>
           <button>
             <DotsVerticalIcon className="h-7 w-7 rounded-full border p-1" />
           </button>
@@ -129,11 +273,11 @@ function RoomPage() {
   const [nameInput, setNameInput] = useState("");
   const [openSlide, setOpenSlide] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const { refetchRooms } = useContext(Context);
+  const { refetchRooms, setOpenToast, setToastContent } = useContext(Context);
   const [openModal, setOpenModal] = useState(false);
   const [openAddMemberModal, setOpenAddMemberModal] = useState(false);
   const [modifMode, setModifMode] = useState("image");
-  const [selected, setSelected] = useState<any>(null);
+  const [selected, setSelected] = useState<any[]>([]);
   const { mutateAsync: readRoomMutation } = trpc.useMutation([
     "room.read-room",
   ]);
@@ -143,13 +287,16 @@ function RoomPage() {
       roomId,
     },
   ]);
-  const { data: messagesData, isLoading: isLoadingMessagesData } =
-    trpc.useQuery([
-      "room.get-messages",
-      {
-        roomId,
-      },
-    ]);
+  const {
+    data: messagesData,
+    isLoading: isLoadingMessagesData,
+    refetch: refetchMessages,
+  } = trpc.useQuery([
+    "room.get-messages",
+    {
+      roomId,
+    },
+  ]);
   useEffect(() => {
     if (data) {
       setImageUrl(data?.image || "");
@@ -173,7 +320,7 @@ function RoomPage() {
     "room.change-name-room",
   ]);
   const { mutateAsync: addMemberMutation } = trpc.useMutation([
-    "room.add-member-room",
+    "room.add-members-room",
   ]);
   const readRoom = async () => {
     await readRoomMutation({ roomId: roomId });
@@ -191,6 +338,15 @@ function RoomPage() {
         setMessages((m) => {
           return [...m, message];
         });
+        setToastContent({
+          title: message?.room?.name,
+          image: message?.room?.image
+            ? message?.room?.image
+            : message?.sender?.image,
+          content: `${message?.sender?.name}: "${message?.message}"`,
+          messageToReply: message,
+        });
+        setOpenToast(true);
         refetchRooms();
       },
     }
@@ -215,12 +371,13 @@ function RoomPage() {
     refetchRooms();
     refetch();
   };
-  const handleAddMember = async () => {
-    if (!data || !selected) return;
+  const handleAddMembers = async () => {
+    if (!data || !selected || selected.length === 0) return;
     await addMemberMutation({
       roomId: data?.id,
-      memberId: selected.id,
+      memberIds: selected?.map((sel) => sel.id),
     });
+    console.log(selected);
     setOpenAddMemberModal(false);
     refetchRooms();
     refetch();
@@ -274,6 +431,8 @@ function RoomPage() {
                     />
                   )}
                 <MessageItem
+                  key={m.id}
+                  refetchMessages={refetchMessages}
                   isFollowed={messages[i - 1]?.sender?.id === m.sender.id}
                   last={i === messages.length - 1}
                   room={data}
@@ -344,17 +503,10 @@ function RoomPage() {
             {data?.members.map((member) => (
               <div
                 key={member.id}
-                className="flex items-center bg-slate-100 w-full rounded-md p-1"
+                className="flex items-center gap-2 bg-slate-100 w-full rounded-md p-1"
               >
                 <Avatar user={member} size="6" />
-                <span
-                  className={classNames(
-                    selected ? "font-semibold" : "font-normal",
-                    "ml-3 block truncate"
-                  )}
-                >
-                  {member.name}
-                </span>
+                <span>{member.name}</span>
               </div>
             ))}
           </div>
@@ -418,13 +570,13 @@ function RoomPage() {
       <Modal
         open={openAddMemberModal}
         setOpen={setOpenAddMemberModal}
-        onSuccess={handleAddMember}
+        onSuccess={handleAddMembers}
         focusRef={inputRef}
         successBtnContent={"Add member"}
       >
         <form
           className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 rounded-lg"
-          onSubmit={handleAddMember}
+          onSubmit={handleAddMembers}
         >
           <div className="sm:flex sm:items-start">
             <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">

@@ -16,7 +16,7 @@ wss.on("connection", () => {
   });
 });
 
-console.log(`wss server start at ws://localhost:3001`);
+console.log(`wss server start at ws://192.168.1.65:3001`);
 
 process.on("SIGTERM", () => {
   console.log("Got SIGTERM");

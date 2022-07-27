@@ -8,7 +8,7 @@ import {
   createRoomShema,
   changeImageRoomSchema,
   changeNameRoomSchema,
-  addMemberRoomSchema
+  addMemberRoomSchema, roomSubSchema, Room
 } from "../../constants/schemas";
 import { Events } from "../../constants/events";
 import * as trpc from "@trpc/server";
@@ -27,16 +27,18 @@ export const roomRouter = createRouter()
         sentAt: new Date(),
         senderId: ctx.session?.user?.id,
       }
-      let newMessage = await prisma.message.create({ data: message, include: { sender: true, messageToAnswer: true, replies: true } });
-      const prismaRoom = await prisma.room.update({ include: { readMembers: true }, where: { id: input.roomId }, data: { lastModified: new Date() } })
+      let newMessage = await prisma.message.create({ data: message, include: { sender: true, messageToAnswer: true, replies: true, room: true, } });
+      let prismaRoom = await prisma.room.update({ include: { readMembers: true }, where: { id: input.roomId }, data: { lastModified: new Date() } })
       const user = await prisma.user.findFirst({ where: { id: ctx.session?.user.id } })
       if (user && prismaRoom) {
         const members = prismaRoom.readMembers.map((m) => ({ id: m.id }))
-        await prisma.room.update({ include: { readMembers: true }, where: { id: prismaRoom.id }, data: { readMembers: { disconnect: members, connect: { id: user.id } } } })
+        prismaRoom = await prisma.room.update({ include: { readMembers: true, members: true }, where: { id: prismaRoom.id }, data: { readMembers: { disconnect: members, connect: { id: user.id } } } })
       }
       if (input.messageToReplyId !== "")
-        newMessage = await prisma.message.update({ where: { id: newMessage.id }, data: { messageToAnswerId: input.messageToReplyId }, include: { sender: true, messageToAnswer: true, replies: true } })
+        newMessage = await prisma.message.update({ where: { id: newMessage.id }, data: { messageToAnswerId: input.messageToReplyId }, include: { room: true, sender: true, messageToAnswer: true, replies: true, reactions: { select: { user: true, reaction: true, label: true } } } })
       ctx.ee.emit(Events.SEND_MESSAGE, newMessage);
+      ctx.ee.emit(Events.UPDATE_ROOM, prismaRoom);
+
       return newMessage
     },
   })
@@ -44,11 +46,12 @@ export const roomRouter = createRouter()
     input: createRoomShema, async resolve({ ctx, input }) {
       if (ctx.session && ctx.session.user) {
         const user = await prisma.user.findFirst({ where: { id: ctx.session.user.id } })
-        const room = await prisma.room.create({ data: { name: input.roomName, createdAt: new Date(), creatorId: ctx.session.user.id, private: true } })
+        let room = await prisma.room.create({ data: { name: input.roomName, createdAt: new Date(), creatorId: ctx.session.user.id, private: true } })
         if (user && room) {
           const members = [{ id: ctx.session.user.id }]
-          await prisma.room.update({ include: { members: true }, where: { id: room.id }, data: { members: { connect: members } } })
+          room = await prisma.room.update({ include: { members: true }, where: { id: room.id }, data: { members: { connect: members } } })
         }
+        ctx.ee.emit(Events.UPDATE_ROOM, room);
         return room;
       }
     }
@@ -65,7 +68,7 @@ export const roomRouter = createRouter()
   })
   .query("get-messages", {
     input: getMessagesSchema, resolve({ ctx, input }) {
-      return prisma.room.findFirst({ where: { id: input.roomId } }).messages({ include: { sender: true, replies: true, messageToAnswer: true } });
+      return prisma.room.findFirst({ where: { id: input.roomId } }).messages({ include: { sender: true, room: true, replies: true, messageToAnswer: true, reactions: { select: { user: true, reaction: true, label: true } } } });
     }
   })
   .query("get-rooms", {
@@ -117,25 +120,28 @@ export const roomRouter = createRouter()
   .mutation("change-image-room", {
     input: changeImageRoomSchema, async resolve({ ctx, input }) {
       if (!ctx.session || !ctx.session.user) return;
-      await prisma.room.update({ where: { id: input.roomId }, data: { image: input.image } })
+      const room = await prisma.room.update({ where: { id: input.roomId }, data: { image: input.image }, include: { members: true } })
+      ctx.ee.emit(Events.UPDATE_ROOM, room);
     }
   })
-  .mutation("add-member-room", {
+  .mutation("add-members-room", {
     input: addMemberRoomSchema, async resolve({ ctx, input }) {
       if (!ctx.session || !ctx.session.user) return;
-      const room = await prisma.room.findFirst({ where: { id: input.roomId }, include: { members: true } })
-      const user = await prisma.user.findFirst({ where: { id: input.memberId } })
-      if (room && user) {
-        room.members.push(user)
+      let room = await prisma.room.findFirst({ where: { id: input.roomId }, include: { members: true } })
+      const users = await prisma.user.findMany({ where: { id: { in: input.memberIds } } })
+      if (room && users) {
+        room.members = room.members.concat(users)
         const members = room.members.map((m) => ({ id: m.id }))
-        await prisma.room.update({ include: { members: true }, where: { id: input.roomId }, data: { members: { connect: members } } })
+        room = await prisma.room.update({ include: { members: true }, where: { id: input.roomId }, data: { members: { connect: members } } })
+        ctx.ee.emit(Events.UPDATE_ROOM, room);
       }
     }
   })
   .mutation("change-name-room", {
     input: changeNameRoomSchema, async resolve({ ctx, input }) {
       if (!ctx.session || !ctx.session.user) return;
-      await prisma.room.update({ where: { id: input.roomId }, data: { name: input.name } })
+      const room = await prisma.room.update({ where: { id: input.roomId }, data: { name: input.name }, include: { members: true } })
+      ctx.ee.emit(Events.UPDATE_ROOM, room);
     }
   })
   .subscription("onSendMessage", {
@@ -152,6 +158,23 @@ export const roomRouter = createRouter()
 
         return () => {
           ctx.ee.off(Events.SEND_MESSAGE, onMessage);
+        };
+      });
+    },
+  }).subscription("onUpdateRoom", {
+    input: roomSubSchema,
+    async resolve({ ctx, input }) {
+
+      return new trpc.Subscription<Room>((emit) => {
+        async function onUpdateRoom(data: Room) {
+          if (data.members.find((member: { id: any; }) => member.id === input.userId)) {
+            emit.data(data);
+          }
+        }
+        ctx.ee.on(Events.UPDATE_ROOM, onUpdateRoom);
+
+        return () => {
+          ctx.ee.off(Events.UPDATE_ROOM, onUpdateRoom);
         };
       });
     },

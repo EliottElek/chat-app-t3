@@ -55,19 +55,31 @@ model User {
   Message       Message[]
   readRooms     Room[]    @relation("readMembers")
 
+  Reaction Reaction[]
 }
 
 model Message {
-  id                String    @id @default(cuid())
+  id                String     @id @default(cuid())
   message           String?
   roomId            String
   sentAt            DateTime
   senderId          String
   messageToAnswerId String?
-  replies           Message[] @relation("replyMessage")
-  messageToAnswer   Message?  @relation("replyMessage", fields: [messageToAnswerId], references: [id])
-  room              Room      @relation(fields: [roomId], references: [id])
-  sender            User      @relation(fields: [senderId], references: [id])
+  replies           Message[]  @relation("replyMessage")
+  reactions         Reaction[]
+  messageToAnswer   Message?   @relation("replyMessage", fields: [messageToAnswerId], references: [id])
+  room              Room       @relation(fields: [roomId], references: [id])
+  sender            User       @relation(fields: [senderId], references: [id])
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  message   Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  messageId String?
+  reaction  String
+  label     String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Room {

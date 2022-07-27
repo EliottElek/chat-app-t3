@@ -224,7 +224,7 @@ const Layout = ({ room, children, setOpenSlide }) => {
                               className={[
                                 "truncate max-w-full",
                                 item.readMembers.findIndex(
-                                  (i) => i.id === session.user?.id
+                                  (i) => i.id === session?.user?.id
                                 ) === -1
                                   ? "font-bold"
                                   : "font-normal",
@@ -237,7 +237,7 @@ const Layout = ({ room, children, setOpenSlide }) => {
                                 className={[
                                   "flex items-center gap-2 w-full truncate",
                                   item.readMembers.findIndex(
-                                    (i) => i.id === session.user?.id
+                                    (i) => i.id === session?.user?.id
                                   ) === -1
                                     ? "font-bold"
                                     : "font-normal text-slate-400",
@@ -281,7 +281,7 @@ const Layout = ({ room, children, setOpenSlide }) => {
                 >
                   {room?.name}
                 </h1>
-                <ul className="flex ml-2 items-center pt-1">
+                <ul className="flex ml-2 items-center pt-1 truncate max-w-full">
                   {room?.members?.map((member, i) => (
                     <li key={member.id} className="text-xs text-gray-400">
                       {member.name}

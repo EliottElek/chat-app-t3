@@ -9,7 +9,7 @@ import "../styles/globals.css";
 import { createWSClient, wsLink } from "@trpc/client/links/wsLink";
 import { httpBatchLink } from "@trpc/client/links/httpBatchLink";
 import { ContextProvider } from "../AppContext";
-
+import Toast from "../components/Toast";
 const MyApp: AppType = ({
   Component,
   pageProps: { session, ...pageProps },
@@ -18,6 +18,7 @@ const MyApp: AppType = ({
     <SessionProvider session={session}>
       <ContextProvider>
         <Component {...pageProps} />
+        <Toast />
       </ContextProvider>
     </SessionProvider>
   );
