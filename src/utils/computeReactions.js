@@ -10,6 +10,7 @@ export default function conputeReactions(message) {
         reactors: [reaction.user],
       });
     else {
+      // Otherwise
       const reactionIndex = finalReactions.findIndex(
         (react) => react.label === reaction.label
       );
