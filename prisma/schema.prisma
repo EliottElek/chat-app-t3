@@ -7,8 +7,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "postgres://tnwdtfqhemhisr:246313518f4be2d40a8c8cbaa23dbeb4822f4ed0f379e7b0f36c018428abba56@ec2-44-208-88-195.compute-1.amazonaws.com:5432/dmuhde8mfgr28"
-  // url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 model Example {
