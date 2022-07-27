@@ -22,4 +22,5 @@ export default function conputeReactions(message) {
     }
   });
   return finalReactions;
+  // return final reactions
 }
