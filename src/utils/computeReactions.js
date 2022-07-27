@@ -2,6 +2,7 @@ export default function conputeReactions(message) {
   if (!message || !message.reactions || message.reactions.length === 0) return;
   let finalReactions = [];
   message.reactions.forEach((reaction) => {
+    // If first reaction, no need to map
     if (finalReactions.length === 0)
       finalReactions.push({
         reaction: reaction.reaction,
