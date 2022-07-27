@@ -22,6 +22,7 @@ userSchema = z.object({
     sessions: z.array(sessionSchema),
     messages: z.array(messageSchema)
 })
+
 accountSchema = z.object({
     id: z.string(),
     userId: z.string(),
@@ -67,6 +68,12 @@ export type Message = z.TypeOf<typeof messageSchema>;
 export type Reaction = z.TypeOf<typeof reactionSchema>;
 export type Room = z.TypeOf<typeof roomSchema>;
 
+export const userUpdateSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    email: z.string(),
+    image: z.string(),
+})
 
 export const messageSubSchema = z.object({
     roomId: z.string(),

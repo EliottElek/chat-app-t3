@@ -1,6 +1,7 @@
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
 import Head from "next/head";
 import { Dialog, Menu, Transition } from "@headlessui/react";
+import Image from "next/image";
 import {
   BellIcon,
   MenuAlt2Icon,
@@ -14,7 +15,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useSession } from "next-auth/react";
 const userNavigation = [
-  { name: "Your Profile", href: "#" },
+  { name: "Your Profile", href: "/profile" },
   { name: "Settings", href: "#" },
   { name: "Sign out", href: "#" },
 ];
@@ -24,7 +25,7 @@ function classNames(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
-const Layout = ({ room, children, setOpenSlide }) => {
+const Layout = ({ room, children, setOpenSlide, slider }) => {
   const { data: session } = useSession();
   const [roomName, setRoomName] = useState("");
   const [emptyMessage, setEmptyMessage] = useState("");
@@ -136,7 +137,9 @@ const Layout = ({ room, children, setOpenSlide }) => {
                   <div className="flex-shrink-0 flex items-center px-4">
                     <Link href="/">
                       <a href="">
-                        <img
+                        <Image
+                          height="40"
+                          width="40"
                           className="h-8 w-auto"
                           src="https://tailwindui.com/img/{logo}s/workflow-{logo}-indigo-500-mark-white-text.svg"
                           alt="Workflow"
@@ -308,16 +311,18 @@ const Layout = ({ room, children, setOpenSlide }) => {
                     aria-hidden="true"
                   />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setOpenSlide(true)}
-                  className=" p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none"
-                >
-                  <span className="sr-only">Open slide-over</span>
-                  <CogIcon className="h-6 w-6" aria-hidden="true" />
-                </button>
+                {slider && (
+                  <button
+                    type="button"
+                    onClick={() => setOpenSlide(true)}
+                    className=" p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none"
+                  >
+                    <span className="sr-only">Open slide-over</span>
+                    <CogIcon className="h-6 w-6" aria-hidden="true" />
+                  </button>
+                )}
                 {/* Profile dropdown */}
-                <Menu as="div" className="ml-3 relative">
+                <Menu as="div" className="ml-3 relative z-50">
                   <div>
                     <Menu.Button className="max-w-xs bg-white flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                       <span className="sr-only">Open user menu</span>
@@ -333,19 +338,20 @@ const Layout = ({ room, children, setOpenSlide }) => {
                     leaveFrom="transform opacity-100 scale-100"
                     leaveTo="transform opacity-0 scale-95"
                   >
-                    <Menu.Items className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none">
+                    <Menu.Items className="origin-top-right z-50 absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none">
                       {userNavigation.map((item) => (
                         <Menu.Item key={item.name}>
                           {({ active }) => (
-                            <a
-                              href={item.href}
-                              className={classNames(
-                                active ? "bg-gray-100" : "",
-                                "block px-4 py-2 text-sm text-gray-700"
-                              )}
-                            >
-                              {item.name}
-                            </a>
+                            <Link href={item.href}>
+                              <a
+                                className={classNames(
+                                  active ? "bg-gray-100" : "",
+                                  "block px-4 py-2 text-sm text-gray-700"
+                                )}
+                              >
+                                {item.name}
+                              </a>
+                            </Link>
                           )}
                         </Menu.Item>
                       ))}

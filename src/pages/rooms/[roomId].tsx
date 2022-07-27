@@ -16,6 +16,7 @@ import SlideOver from "../../components/SlideOver";
 import { Context } from "../../AppContext";
 import Modal from "../../components/Modal";
 import UserSelect from "../../layout/UserSelect";
+import Image from "next/image";
 import {
   CheckIcon,
   EmojiHappyIcon,
@@ -134,14 +135,13 @@ function MessageItem({
         >
           <Avatar user={message.sender} size="8" />
         </div>
-
         <li className={liStyles}>
           {message.message}
           {message?.reactions?.length !== 0 && (
             <Menu as="div" className="">
               <Menu.Button
                 className={[
-                  "cursor-pointer absolute z-10  px-1 gap-1 items-center bg-opacity-40 bg-gray-400 rounded-full",
+                  "cursor-pointer absolute z-[1]  px-1 gap-1 items-center bg-opacity-40 bg-gray-400 rounded-full",
                   message.sender?.id === session?.user?.id
                     ? "right-0"
                     : "left-0",
@@ -168,8 +168,8 @@ function MessageItem({
                         leaveFrom="opacity-100 rotate-0 scale-100 "
                         leaveTo="opacity-0 scale-95 "
                       >
-                        <span className="text-gray-500 flex">
-                          {react.reactors.length > 1 && react.reactors.length}
+                        <span className="text-gray-500 flex ">
+                          {/* {react.reactors.length > 1 && react.reactors.length} */}
                           {react.reaction}
                         </span>
                       </Transition>
@@ -416,7 +416,7 @@ function RoomPage() {
     return classes.filter(Boolean).join(" ");
   }
   return (
-    <Layout room={data} setOpenSlide={setOpenSlide}>
+    <Layout room={data} setOpenSlide={setOpenSlide} slider>
       {session && (
         <div className="flex flex-col flex-1 h-full ">
           <ul className="flex flex-col p-4 flex-1 overflow-auto gap-2">
@@ -455,7 +455,9 @@ function RoomPage() {
         <div className="flex flex-col items-center gap-1">
           {data?.image ? (
             <div>
-              <img
+              <Image
+                height="35"
+                width="35"
                 className="h-[150px] object-cover border w-[150px] rounded-full"
                 src={data.image}
                 alt=""

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useContext } from "react";
 import { Context } from "../../AppContext";
 import Layout from "../../layout";
-
+import Image from "next/image";
 const Index = () => {
   const { data: session, status } = useSession();
   const { dataRooms, setOpenNewRoomModal } = useContext(Context);
@@ -12,7 +12,7 @@ const Index = () => {
   return (
     <Layout>
       <div className="w-full h-full flex flex-col bg items-center justify-center gap-1 text-gray-600">
-        <img src="/logo.png" alt="" className="w-1/5" />
+        <Image alt="" src="/logo.png" width="40" height="40" />
         <h1 className="text-2xl">Welcome back {session?.user?.name} !</h1>
         <h3>View your rooms of create a new one.</h3>
         <div className="flex gap-4 mt-4">

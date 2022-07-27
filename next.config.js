@@ -2,6 +2,9 @@ const { env } = require("./src/server/env");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  images: {
+    domains: ["st.depositphotos.com", "cdn.pixabay.com"],
+  },
   reactStrictMode: true,
   async redirects() {
     return [

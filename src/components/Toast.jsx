@@ -1,6 +1,7 @@
 import { Transition } from "@headlessui/react";
 import { useRouter } from "next/router";
-import { useContext, Fragment, useEffect } from "react";
+import { useContext, Fragment } from "react";
+import Image from "next/image";
 import { Context } from "../AppContext";
 export default function Toast() {
   const {
@@ -12,15 +13,15 @@ export default function Toast() {
   } = useContext(Context);
   const router = useRouter();
   if (!toastContent) return null;
-  useEffect(() => {
-    let timer;
-    if (openToast) {
-      timer = setTimeout(() => setOpenToast(false), 3000);
-    }
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [openToast]);
+  // useEffect(() => {
+  //   let timer;
+  //   if (openToast) {
+  //     timer = setTimeout(() => setOpenToast(false), 3000);
+  //   }
+  //   return () => {
+  //     clearTimeout(timer);
+  //   };
+  // }, [openToast]);
   const handleReply = () => {
     if (!toastContent.messageToReply) return;
     setMessageToReply(toastContent.messageToReply);
@@ -31,7 +32,6 @@ export default function Toast() {
     <Transition.Root
       show={openToast}
       as={Fragment}
-      show={openToast}
       enter="duration-200 ease-in"
       enterFrom="opacity-0 translate-x-[100%]"
       enterTo="opacity-100 translate-x-[0%]"
@@ -47,11 +47,13 @@ export default function Toast() {
         <div className="p-2 w-[70%] flex items-center gap-2">
           <div>
             {toastContent?.image ? (
-              <div className="h-11 w-11">
-                <img
+              <div className="h-11 w-11 border">
+                <Image
+                  alt=""
+                  width="45"
+                  height="45"
                   className={`h-11 w-11 rounded-full border`}
                   src={toastContent?.image}
-                  alt=""
                 />
               </div>
             ) : (

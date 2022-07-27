@@ -44,7 +44,10 @@ export default function Modal({
             >
               <Dialog.Panel className="relative h-auto bg-white rounded-lg text-left shadow-xl transform transition-all sm:my-8 sm:max-w-lg sm:w-full">
                 {children}
-                <div className="bg-gray-50 px-4 py-3 sm:px-6 rounded-lg sm:flex overflow-y-auto sm:flex-row-reverse">
+                <form
+                  onSubmit={onSuccess}
+                  className="bg-gray-50 px-4 py-3 sm:px-6 rounded-lg sm:flex overflow-y-auto sm:flex-row-reverse"
+                >
                   <button
                     type="submit"
                     className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-400 text-base font-medium text-white hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-200 sm:ml-3 sm:w-auto sm:text-sm"
@@ -59,7 +62,7 @@ export default function Modal({
                   >
                     Cancel
                   </button>
-                </div>
+                </form>
               </Dialog.Panel>
             </Transition.Child>
           </div>

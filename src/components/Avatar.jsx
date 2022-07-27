@@ -1,3 +1,4 @@
+import Image from "next/image";
 import React from "react";
 
 const Avatar = ({ user, size }) => {
@@ -15,9 +16,12 @@ const Avatar = ({ user, size }) => {
   return (
     <div>
       {user.image ? (
-        <div className="h-9 w-9">
-          <img
-            className={`h-9 w-9 rounded-full border`}
+        <div className="flex items-center">
+          <Image
+            layout="intrinsic"
+            height="40"
+            width="40"
+            className={`h-9 w-9 rounded-full border object-cover`}
             src={user.image}
             alt=""
           />

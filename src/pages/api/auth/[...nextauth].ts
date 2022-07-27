@@ -13,7 +13,8 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     session: async ({ session, token }) => {
       if (session?.user) {
-        session.user.id = token.uid;
+        const user = await prisma.user.findFirst({ where: { id: token.uid } });
+        if (user) session.user = user
       }
       return session;
     },
