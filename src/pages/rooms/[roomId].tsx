@@ -63,10 +63,10 @@ function MessageItem({
     "text-md max-w-[60%] p-2 border border-gray-200 rounded-lg shadow-sm text-gray-600 relative ";
 
   const reactions = [
-    { label: "hearted-eyes", reaction: "😍" },
+    { label: "angry", reaction: "😠" },
     { label: "red-heart", reaction: "❤️" },
     { label: "funny-tear-eyes", reaction: "😂" },
-    { label: "star-eyes", reaction: "🤩" },
+    { label: "thum", reaction: "👍" },
   ];
   const liStyles =
     message.sender?.id === session?.user?.id

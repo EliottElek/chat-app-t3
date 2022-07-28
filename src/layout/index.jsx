@@ -110,7 +110,7 @@ const Layout = ({ room, children, setOpenSlide, slider }) => {
                 leaveFrom="translate-x-0"
                 leaveTo="-translate-x-full"
               >
-                <Dialog.Panel className="relative flex-1 flex flex-col max-w-xs w-full pt-5 pb-4 bg-gray-800">
+                <Dialog.Panel className="relative flex-1 flex flex-col max-w-xs w-full pt-5 pb-4 bg-gray-100">
                   <Transition.Child
                     as={Fragment}
                     enter="ease-in-out duration-300"
@@ -135,13 +135,11 @@ const Layout = ({ room, children, setOpenSlide, slider }) => {
                     </div>
                   </Transition.Child>
                   <div className="flex-shrink-0 flex items-center px-4">
-                    <Link href="/">
-                      <a href="">
-                        <Image
-                          height="40"
-                          width="40"
-                          className="h-8 w-auto"
-                          src="https://tailwindui.com/img/{logo}s/workflow-{logo}-indigo-500-mark-white-text.svg"
+                    <Link href="/rooms">
+                      <a>
+                        <img
+                          className="h-11 w-auto brightness-95"
+                          src={"/logo.png"}
                           alt="Workflow"
                         />
                       </a>
@@ -151,19 +149,74 @@ const Layout = ({ room, children, setOpenSlide, slider }) => {
                     {isLoadingRooms ? (
                       <p>Loading...</p>
                     ) : (
-                      <nav className="px-2 space-y-1">
+                      <nav className="flex-1  py-4 space-y-1 w-full">
+                        <div className="flex w-full items-center justify-center sticky top-0 bg-white opacity-100 z-50 rounded-md">
+                          <button
+                            onClick={() => setOpenNewRoomModal(true)}
+                            type="button"
+                            className="mt-3 flex grow flex-1 justify-center rounded-md border border-gray-300 px-4 py-2  text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:text-sm"
+                          >
+                            New chat room
+                          </button>
+                        </div>
                         {dataRooms?.map((item) => (
                           <Link key={item.id} href={`/rooms/${item.id}`}>
                             <a
+                              onClick={() => readRoom(item.id)}
                               className={classNames(
                                 roomId === item.id
-                                  ? "bg-gray-700 text-white"
-                                  : "bg-transparent text-gray-300",
-                                "hover:bg-gray-700 hover:text-white",
-                                "group flex items-center px-2 py-2 text-base font-medium rounded-md"
+                                  ? "bg-white text-gray-700"
+                                  : "bg-transparent text-gray-700",
+                                "hover:bg-white hover:text-gray-700",
+                                "group flex items-center justify-between px-4 py-2 text-base font-medium w-full gap-3 relative"
                               )}
                             >
-                              {item.name}
+                              <div className="flex items-center gap-2 w-full">
+                                <Avatar user={item} size={"medium"} />
+                                <span className="flex truncate flex-col max-w-full">
+                                  <span
+                                    className={[
+                                      "truncate max-w-full",
+                                      item.readMembers.findIndex(
+                                        (i) => i.id === session?.user?.id
+                                      ) === -1
+                                        ? "font-bold"
+                                        : "font-normal",
+                                    ].join(" ")}
+                                  >
+                                    {item.name}
+                                  </span>
+                                  {item.messages[0] && (
+                                    <span
+                                      className={[
+                                        "flex items-center gap-2 w-full truncate",
+                                        item.readMembers.findIndex(
+                                          (i) => i.id === session?.user?.id
+                                        ) === -1
+                                          ? "font-bold"
+                                          : "font-normal text-slate-400",
+                                      ].join(" ")}
+                                    >
+                                      <span className="text-sm truncate  max-w-full">
+                                        {
+                                          item.messages[0]?.sender?.name.split(
+                                            "."
+                                          )[0]
+                                        }{" "}
+                                        : {item.messages[0]?.message}
+                                      </span>
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                              <span className="text-xs absolute self-end	text-slate-400 font-light top-3 right-4">
+                                {item?.lastModified?.toLocaleTimeString(
+                                  "en-AU",
+                                  {
+                                    timeStyle: "short",
+                                  }
+                                )}
+                              </span>
                             </a>
                           </Link>
                         ))}
