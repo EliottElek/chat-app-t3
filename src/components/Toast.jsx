@@ -1,8 +1,8 @@
 import { Transition } from "@headlessui/react";
 import { useRouter } from "next/router";
 import { useContext, Fragment } from "react";
-import Image from "next/image";
 import { Context } from "../AppContext";
+import Avatar from "./Avatar";
 export default function Toast() {
   const {
     openToast,
@@ -46,25 +46,7 @@ export default function Toast() {
       >
         <div className="p-2 w-[70%] flex items-center gap-2">
           <div>
-            {toastContent?.image ? (
-              <div className="h-11 w-11 border">
-                <Image
-                  alt=""
-                  width="45"
-                  height="45"
-                  className={`h-11 w-11 rounded-full border`}
-                  src={toastContent?.image}
-                />
-              </div>
-            ) : (
-              <div className="h-11 w-11">
-                <div
-                  className={`h-11 w-11 uppercase rounded-full bg-slate-200 flex items-center gap-2 justify-center border`}
-                >
-                  {toastContent?.title && toastContent?.title[0]}
-                </div>
-              </div>
-            )}
+            <Avatar src={toastContent?.image} />
           </div>
           <div className="truncate">
             <p className="font-semibold truncate">{toastContent?.title}</p>

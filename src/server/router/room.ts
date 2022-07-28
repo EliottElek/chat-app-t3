@@ -21,10 +21,10 @@ export const roomRouter = createRouter()
       if (!ctx.session || !ctx.session.user) return;
       const room = await prisma.room.findFirst({ where: { id: input.roomId } })
       const message: Message = {
-        id: randomUUID(),
+        id: input.id,
         message: input.message,
         roomId: room?.id,
-        sentAt: new Date(),
+        sentAt: input.sentAt,
         senderId: ctx.session?.user?.id,
       }
       let newMessage = await prisma.message.create({ data: message, include: { sender: true, messageToAnswer: true, replies: true, room: true, } });
@@ -110,12 +110,31 @@ export const roomRouter = createRouter()
       if (!ctx.session || !ctx.session.user) return;
       const room = await prisma.room.findFirst({ where: { id: input.roomId }, include: { readMembers: true } })
       const user = await prisma.user.findFirst({ where: { id: ctx.session?.user.id } })
-      if (room && user) {
+      if (room && user && room.readMembers.findIndex((m) => m.id === user.id) === -1) {
         room.readMembers.push(user)
         const members = room.readMembers.map((m) => ({ id: m.id }))
         await prisma.room.update({ include: { readMembers: true }, where: { id: input.roomId }, data: { readMembers: { connect: members } } })
+        ctx.ee.emit(Events.READ_ROOM, room);
+
       }
     }
+  }).subscription("onReadRoom", {
+    input: getMessagesSchema,
+    async resolve({ ctx, input }) {
+
+      return new trpc.Subscription<Message>((emit) => {
+        async function onReadRoom(data: Message) {
+          if (input.roomId === data.id) {
+            emit.data(data);
+          }
+        }
+        ctx.ee.on(Events.READ_ROOM, onReadRoom);
+
+        return () => {
+          ctx.ee.off(Events.READ_ROOM, onReadRoom);
+        };
+      });
+    },
   })
   .mutation("change-image-room", {
     input: changeImageRoomSchema, async resolve({ ctx, input }) {

@@ -3,8 +3,8 @@ import React, { useEffect, useRef, useState } from "react";
 import Layout from "../layout";
 import { Dialog, Tab } from "@headlessui/react";
 import Modal from "../components/Modal";
-import Image from "next/image";
 import { trpc } from "../utils/trpc";
+import Avatar from "../components/Avatar";
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
 }
@@ -102,25 +102,7 @@ const ProfileTab = ({ user, session }: any) => {
     <Tab.Panel className={classNames("rounded-lg bg-white p-3", "ring-white")}>
       <div className="p-4 flex gap-4 flex-1">
         <div>
-          {user?.image ? (
-            <div className="border rounded-full object-cover">
-              <Image
-                height="140"
-                width="140"
-                className={`rounded-full`}
-                src={user?.image}
-                alt=""
-              />
-            </div>
-          ) : (
-            <div className="h-32 w-32">
-              <div
-                className={`h-32 w-32 uppercase text-4xl rounded-full bg-slate-200 flex items-center gap-2 justify-center border`}
-              >
-                {user?.name ? user?.name[0] : "?"}
-              </div>
-            </div>
-          )}
+          <Avatar src={user?.image} size={"large"} />
         </div>
         <div className="ml-4">
           <h1 className="text-2xl">{user?.name}</h1>

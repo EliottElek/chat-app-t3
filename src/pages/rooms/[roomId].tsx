@@ -18,11 +18,12 @@ import Modal from "../../components/Modal";
 import UserSelect from "../../layout/UserSelect";
 import Image from "next/image";
 import {
-  CheckIcon,
   EmojiHappyIcon,
   ReplyIcon,
   DotsVerticalIcon,
+  CheckCircleIcon as Pending,
 } from "@heroicons/react/outline";
+import { CheckCircleIcon as Sent } from "@heroicons/react/solid";
 import { useTimeoutFn } from "react-use";
 import { Dialog, Transition, Menu } from "@headlessui/react";
 import MenuComp from "../../components/Menu";
@@ -44,9 +45,16 @@ function MessageItem({
   isFollowed: boolean;
   refetchMessages: any;
 }) {
-  const { setMessageToReply, setFocusInput, setToastContent, setOpenToast } =
-    useContext(Context);
+  const {
+    setMessageToReply,
+    setFocusInput,
+    setToastContent,
+    setOpenToast,
+    messageStatus,
+  } = useContext(Context);
   let [isShowing, setIsShowing] = useState(true);
+  const [messageToReplyRef, setMessageToReplyRef] =
+    useState<null | HTMLElement>(null);
   let [, , resetIsShowing] = useTimeoutFn(() => setIsShowing(true), 100);
   const { mutateAsync: reactToMessage } = trpc.useMutation([
     "message.add-reaction-message",
@@ -69,9 +77,19 @@ function MessageItem({
     setMessageToReply(message);
     setTimeout(() => setFocusInput(true), 200);
   };
+  const scrollToReply = () => {
+    if (!messageToReplyRef) return;
+    messageToReplyRef.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   const handleReactToMessage = async (react: any) => {
     await reactToMessage({ messageId: message.id, reaction: react });
-    refetchMessages();
+    // refetchMessages();
+    message.reactions.push({
+      messageId: message.id,
+      reaction: react.reaction,
+      label: react.label,
+      user: session.user,
+    });
     setIsShowing(false);
     resetIsShowing();
   };
@@ -84,18 +102,20 @@ function MessageItem({
     ],
     {
       onNext: (reaction) => {
-        setToastContent({
-          title: `${reaction?.user?.name} reacted : "${reaction.reaction}"`,
-          image: message?.room?.image
-            ? message?.room?.image
-            : reaction?.user?.image,
-          content: `to :"${message.message}"`,
-          messageToReply: message,
-        });
-        setOpenToast(true);
+        if (session.user && reaction.user.id !== session.user.id) {
+          setToastContent({
+            title: `${reaction?.user?.name} reacted : "${reaction.reaction}"`,
+            image: message?.room?.image
+              ? message?.room?.image
+              : reaction?.user?.image,
+            content: `to :"${message.message}"`,
+            messageToReply: message,
+          });
+          setOpenToast(true);
+          setIsShowing(false);
+          resetIsShowing();
+        }
         refetchMessages();
-        setIsShowing(false);
-        resetIsShowing();
       },
     }
   );
@@ -109,7 +129,8 @@ function MessageItem({
               "self-end flex-row-reverse",
           ].join(" ")}
         >
-          <span
+          <button
+            onClick={scrollToReply}
             className={[
               "relative truncate max-w-md p-1 pl-6 translate-y-[6px] rounded-md bg-slate-300 bg-opacity-50 text-gray-500",
               message.sender?.id === session?.user?.id
@@ -119,7 +140,7 @@ function MessageItem({
           >
             <ReplyIcon className="left-1 top-[50%] -translate-y-1/2 absolute h-4 w-4 rotate-180 text-gray-500" />
             {message.messageToAnswer.message}
-          </span>
+          </button>
         </div>
       )}
 
@@ -133,7 +154,7 @@ function MessageItem({
         <div
           className={isFollowed ? "opacity-0 h-9 w-9" : "opacity-100 h-9 w-9"}
         >
-          <Avatar user={message.sender} size="8" />
+          <Avatar src={message.sender.image} size={"semi-small"} />
         </div>
         <li className={liStyles}>
           {message.message}
@@ -214,21 +235,13 @@ function MessageItem({
           )}
         </li>
         <span className="text-[0.6rem] text-slate-400 self-end">
-          {message.sentAt.toLocaleTimeString("en-AU", {
+          {message?.sentAt?.toLocaleTimeString("en-AU", {
             timeStyle: "short",
           })}
         </span>
-        {last &&
-          message.sender?.id === session?.user?.id &&
-          room?.readMembers.length > 1 && (
-            <span className="flex -gap-4 absolute -bottom-2 right-2 text-sky-500">
-              <CheckIcon className="h-4 w-4" />
-              <CheckIcon className="-ml-2 h-4 w-4" />
-            </span>
-          )}
         <div
           className={[
-            "opacity-0 p-2 py-4 flex h-7 items-center gap-3 rounded-xl  bg-white text-gray-400 group-hover:opacity-100 transition-all delay-75 self-center -mt-4",
+            "opacity-0 p-1  flex items-center gap-3 rounded-full  bg-gray-100 text-gray-400 group-hover:opacity-100 transition-all delay-75 self-center -mt-4",
             ,
             message.sender?.id === session?.user?.id
               ? "-mr-10"
@@ -259,6 +272,25 @@ function MessageItem({
             <DotsVerticalIcon className="h-7 w-7 rounded-full border p-1" />
           </button>
         </div>
+        {last && message.sender?.id === session?.user?.id && (
+          <span className="absolute -bottom-2 right-6">
+            {messageStatus === "sent" && (
+              <Sent className="h-4 w-4 text-blue-500" />
+            )}
+            {messageStatus === "sending" && (
+              <Pending className="h-4 w-4 text-blue-500" />
+            )}
+            {messageStatus === "seen" && (
+              <span className="flex translate-y-2">
+                {room?.readMembers
+                  .filter((reader: any) => reader.id !== session?.user?.id)
+                  .map((reader: any) => (
+                    <Avatar key={reader.id} src={reader.image} size={"small"} />
+                  ))}
+              </span>
+            )}
+          </span>
+        )}
       </div>
     </>
   );
@@ -266,6 +298,7 @@ function MessageItem({
 
 function RoomPage() {
   const router = useRouter();
+  const bottomRef = useRef<null | HTMLDivElement>(null);
   const roomId = router.query.roomId as string;
   const { data: session, status } = useSession();
   const [message, setMessage] = useState("");
@@ -273,7 +306,8 @@ function RoomPage() {
   const [nameInput, setNameInput] = useState("");
   const [openSlide, setOpenSlide] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const { refetchRooms, setOpenToast, setToastContent } = useContext(Context);
+  const { refetchRooms, setOpenToast, setToastContent, setMessageStatus } =
+    useContext(Context);
   const [openModal, setOpenModal] = useState(false);
   const [openAddMemberModal, setOpenAddMemberModal] = useState(false);
   const [modifMode, setModifMode] = useState("image");
@@ -304,6 +338,11 @@ function RoomPage() {
     }
   }, [data, setNameInput, setImageUrl, data?.image, data?.name]);
   useEffect(() => {
+    if (data && data?.readMembers?.length > 1) {
+      setMessageStatus("seen");
+    }
+  }, [data, data?.readMembers]);
+  useEffect(() => {
     if (messagesData && !isLoadingMessagesData) {
       setMessages(messagesData);
     }
@@ -322,6 +361,9 @@ function RoomPage() {
   const { mutateAsync: addMemberMutation } = trpc.useMutation([
     "room.add-members-room",
   ]);
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
   const readRoom = async () => {
     await readRoomMutation({ roomId: roomId });
     refetchRooms();
@@ -335,23 +377,42 @@ function RoomPage() {
     ],
     {
       onNext: (message) => {
-        setMessages((m) => {
-          return [...m, message];
-        });
-        setToastContent({
-          title: message?.room?.name,
-          image: message?.room?.image
-            ? message?.room?.image
-            : message?.sender?.image,
-          content: `${message?.sender?.name}: "${message?.message}"`,
-          messageToReply: message,
-        });
-        setOpenToast(true);
+        if (session?.user && message.sender.id !== session?.user.id) {
+          setMessages((m) => {
+            return [...m, message];
+          });
+          setToastContent({
+            title: message?.room?.name,
+            image: message?.room?.image
+              ? message?.room?.image
+              : message?.sender?.image,
+            content: `${message?.sender?.name}: "${message?.message}"`,
+            messageToReply: message,
+          });
+          setOpenToast(true);
+        } else {
+          setMessageStatus("sent");
+        }
         refetchRooms();
       },
     }
   );
-  const handleChangeImage = async () => {
+  trpc.useSubscription(
+    [
+      "room.onReadRoom",
+      {
+        roomId,
+      },
+    ],
+    {
+      onNext: (room) => {
+        if (room.readMembers.length > 1) setMessageStatus("seen");
+        refetchRooms();
+      },
+    }
+  );
+  const handleChangeImage = async (e: { preventDefault: () => void }) => {
+    e.preventDefault();
     if (imageUrl === "" || !data) return;
     await changeRoomImageMutation({
       roomId: data?.id,
@@ -361,7 +422,9 @@ function RoomPage() {
     refetchRooms();
     refetch();
   };
-  const handleChangeName = async () => {
+  const handleChangeName = async (e: { preventDefault: () => void }) => {
+    e.preventDefault();
+
     if (nameInput === "" || !data) return;
     await changeRoomNameMutation({
       roomId: data?.id,
@@ -382,18 +445,6 @@ function RoomPage() {
     refetchRooms();
     refetch();
   };
-  const NewMessageDivider = () => (
-    <div className="relative">
-      <div className="absolute inset-0 flex items-center" aria-hidden="true">
-        <div className="w-full border-t border-red-400" />
-      </div>
-      <div className="relative flex justify-center">
-        <span className="px-2 py-0 bg-white text-sm border-red-400  border text-red-400 rounded-xl">
-          New message !
-        </span>
-      </div>
-    </div>
-  );
   interface Props {
     date?: String;
   }
@@ -404,7 +455,7 @@ function RoomPage() {
         <div className="w-full border-t border-gray-300" />
       </div>
       <div className="relative flex justify-center">
-        <span className="px-2 py-0 bg-white text-xs  border text-gray-400 rounded-xl">
+        <span className="px-2 py-0 bg-gray-200 text-xs  border text-gray-400 rounded-xl">
           {date}
         </span>
       </div>
@@ -412,16 +463,13 @@ function RoomPage() {
   );
   if (!session && status !== "loading" && typeof window !== "undefined")
     signIn();
-  function classNames(...classes: string[]) {
-    return classes.filter(Boolean).join(" ");
-  }
   return (
     <Layout room={data} setOpenSlide={setOpenSlide} slider>
       {session && (
         <div className="flex flex-col flex-1 h-full ">
           <ul className="flex flex-col p-4 flex-1 overflow-auto gap-2">
             {messages.map((m, i) => (
-              <div key={m.id}>
+              <div key={m.id} id={`#${m.id}`}>
                 {messages[i - 1] &&
                   (m.sentAt - messages[i - 1].sentAt) / 6000 > 100 && (
                     <DateDivider
@@ -441,8 +489,12 @@ function RoomPage() {
                 />
               </div>
             ))}
+            <div ref={bottomRef} />
           </ul>
           <MessageForm
+            user={session.user}
+            messages={messages}
+            setMessages={setMessages}
             onFocus={readRoom}
             sendMessageMutation={sendMessageMutation}
             roomId={roomId}
@@ -453,23 +505,7 @@ function RoomPage() {
       )}
       <SlideOver open={openSlide} setOpen={setOpenSlide}>
         <div className="flex flex-col items-center gap-1">
-          {data?.image ? (
-            <div>
-              <Image
-                height="35"
-                width="35"
-                className="h-[150px] object-cover border w-[150px] rounded-full"
-                src={data.image}
-                alt=""
-              />
-            </div>
-          ) : (
-            <div>
-              <div className="h-[150px] border w-[150px] text-[4rem] uppercase rounded-full bg-slate-200 flex items-center gap-2 justify-center">
-                {data?.name ? data?.name[0] : "?"}
-              </div>
-            </div>
-          )}
+          <Avatar src={data?.image} size="large" />
           <h1 className="text-2xl mb-4">{data?.name}</h1>
           <button
             onClick={() => {
@@ -505,9 +541,9 @@ function RoomPage() {
             {data?.members.map((member) => (
               <div
                 key={member.id}
-                className="flex items-center gap-2 bg-slate-100 w-full rounded-md p-1"
+                className="flex items-center gap-2 border w-full rounded-md p-1"
               >
-                <Avatar user={member} size="6" />
+                <Avatar src={member.image} size={"medium"} />
                 <span>{member.name}</span>
               </div>
             ))}

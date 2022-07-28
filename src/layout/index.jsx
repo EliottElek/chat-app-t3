@@ -81,7 +81,7 @@ const Layout = ({ room, children, setOpenSlide, slider }) => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <div className="bg-[url('https://i.redd.it/qwd83nc4xxf41.jpg')] bg-contain">
+      <div className="bg-gray-200 bg-contain">
         <Transition.Root show={sidebarOpen} as={Fragment}>
           <Dialog
             as="div"
@@ -221,7 +221,7 @@ const Layout = ({ room, children, setOpenSlide, slider }) => {
                         )}
                       >
                         <div className="flex items-center gap-2 w-full">
-                          <Avatar user={item} size="9" />
+                          <Avatar user={item} size={"medium"} />
                           <span className="flex truncate flex-col max-w-full">
                             <span
                               className={[
@@ -326,7 +326,7 @@ const Layout = ({ room, children, setOpenSlide, slider }) => {
                   <div>
                     <Menu.Button className="max-w-xs bg-white flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                       <span className="sr-only">Open user menu</span>
-                      <Avatar user={session?.user} size="10" />
+                      <Avatar src={session?.user?.image} size={"medium"} />
                     </Menu.Button>
                   </div>
                   <Transition

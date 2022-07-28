@@ -17,7 +17,7 @@ export const ContextProvider = ({ children }) => {
   const [openToast, setOpenToast] = useState(false);
   const [focusInput, setFocusInput] = useState(false);
   const [toastContent, setToastContent] = useState(null);
-
+  const [messageStatus, setMessageStatus] = useState("sent");
   trpc.useSubscription(
     [
       "room.onUpdateRoom",
@@ -48,6 +48,8 @@ export const ContextProvider = ({ children }) => {
         setOpenToast,
         toastContent,
         setToastContent,
+        setMessageStatus,
+        messageStatus,
       }}
     >
       {children}

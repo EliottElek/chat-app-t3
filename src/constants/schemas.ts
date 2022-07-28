@@ -1,9 +1,11 @@
 import z from "zod";
 
 export const sendMessageSchema = z.object({
+    id: z.string(),
     roomId: z.string(),
     message: z.string(),
-    messageToReplyId: z.string()
+    messageToReplyId: z.string(),
+    sentAt: z.date()
 });
 
 export let accountSchema: any = {};

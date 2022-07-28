@@ -9,6 +9,7 @@ import { useContext, useRef, useEffect } from "react";
 import { Context } from "../AppContext";
 import { Fragment } from "react";
 import { Transition } from "@headlessui/react";
+import { v4 as uuidv4 } from "uuid";
 
 const ReplyPanel = () => {
   const { messageToReply, setMessageToReply, setFocusInput } =
@@ -25,7 +26,7 @@ const ReplyPanel = () => {
         leaveFrom="opacity-100 translate-y-0 sm:scale-100"
         leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
       >
-        <div className="flex p-2 pt-8 items-center bg-gray-200 bg-opacity-50 relative">
+        <div className="flex p-2 pt-8 border items-center bg-gray-100 bg-opacity-50 relative">
           <ReplyIcon className="h-7 w-7 absolute top-3 left-3 rotate-180 text-gray-400" />
           <button
             onClick={() => {
@@ -48,8 +49,12 @@ const MessageForm = ({
   roomId,
   message,
   setMessage,
+  setMessages,
+  messages,
+  user,
 }) => {
-  const { messageToReply, setMessageToReply, focusInput } = useContext(Context);
+  const { messageToReply, setMessageToReply, focusInput, setMessageStatus } =
+    useContext(Context);
   const inputReference = useRef(null);
   useEffect(() => {
     if (focusInput) inputReference.current.focus();
@@ -69,12 +74,18 @@ const MessageForm = ({
           onSubmit={(e) => {
             e.preventDefault();
             if (message === "") return;
-            sendMessageMutation({
+            const messageItem = {
+              id: uuidv4(),
+              sentAt: new Date(),
               roomId: roomId,
               message: message,
               messageToReplyId: messageToReply ? messageToReply.id : "",
-            });
+            };
+            sendMessageMutation(messageItem);
+            messageItem.sender = user;
+            setMessages([...messages, messageItem]);
             setMessageToReply(null);
+            setMessageStatus("sending");
             setMessage("");
           }}
         >
