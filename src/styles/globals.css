@@ -10,3 +10,30 @@ body {
   overflow-y: hidden;
   height: 100%;
 }
+#quill-editor > div:nth-child(1) {
+  display: none !important;
+}
+#quill-editor {
+  width: 100%;
+  height: 100%;
+}
+.ql-editor {
+  max-height: 100px;
+  overflow: auto;
+  font-size: 1rem;
+  white-space: normal !important;
+}
+.ql-toolbar {
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+.ql-toolbar.ql-snow {
+  border-bottom: 1px solid transparent !important;
+}
+.ql-container {
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+.quill > .ql-container > .ql-editor.ql-blank::before {
+  color: rgba(114, 114, 114, 0.541);
+}

@@ -21,6 +21,7 @@ const userNavigation = [
 ];
 import Avatar from "../components/Avatar";
 import { Context } from "../AppContext";
+import renderHtml from "../utils/renderHtml";
 function classNames(...classes) {
   return classes.filter(Boolean).join(" ");
 }
@@ -197,13 +198,13 @@ const Layout = ({ room, children, setOpenSlide, slider }) => {
                                           : "font-normal text-slate-400",
                                       ].join(" ")}
                                     >
-                                      <span className="text-sm truncate  max-w-full">
+                                      <span className="text-sm truncate flex max-w-full">
                                         {
                                           item.messages[0]?.sender?.name.split(
                                             "."
                                           )[0]
                                         }{" "}
-                                        : {item.messages[0]?.message}
+                                        :{renderHtml(item.messages[0]?.message)}
                                       </span>
                                     </span>
                                   )}
@@ -299,9 +300,9 @@ const Layout = ({ room, children, setOpenSlide, slider }) => {
                                     : "font-normal text-slate-400",
                                 ].join(" ")}
                               >
-                                <span className="text-sm truncate  max-w-full">
-                                  {item.messages[0]?.sender?.name.split(".")[0]}{" "}
-                                  : {item.messages[0]?.message}
+                                <span className="text-sm truncate flex max-w-full max-h-[30px]">
+                                  {item.messages[0]?.sender?.name.split(".")[0]}
+                                  : {renderHtml(item.messages[0]?.message)}
                                 </span>
                               </span>
                             )}

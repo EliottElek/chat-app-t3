@@ -29,6 +29,7 @@ import { Dialog, Transition, Menu } from "@headlessui/react";
 import MenuComp from "../../components/Menu";
 import Avatar from "../../components/Avatar";
 import computeReactions from "../../utils/computeReactions";
+import renderHtml from "../../utils/renderHtml";
 function MessageItem({
   message,
   session,
@@ -60,7 +61,7 @@ function MessageItem({
     "message.add-reaction-message",
   ]);
   const baseStyles =
-    "text-md max-w-[60%] p-2 border border-gray-200 rounded-lg shadow-sm text-gray-600 relative ";
+    "text-md max-w-[60%] p-2 border border-gray-200 rounded-lg shadow-sm relative ";
 
   const reactions = [
     { label: "angry", reaction: "😠" },
@@ -70,8 +71,8 @@ function MessageItem({
   ];
   const liStyles =
     message.sender?.id === session?.user?.id
-      ? baseStyles.concat("bg-green-200")
-      : baseStyles.concat("self-end bg-white rounded-lg");
+      ? baseStyles.concat("bg-blue-500 text-white")
+      : baseStyles.concat("self-end bg-white rounded-lg text-gray-600");
 
   const handleAnswerMessage = () => {
     setMessageToReply(message);
@@ -139,7 +140,7 @@ function MessageItem({
             ].join(" ")}
           >
             <ReplyIcon className="left-1 top-[50%] -translate-y-1/2 absolute h-4 w-4 rotate-180 text-gray-500" />
-            {message.messageToAnswer.message}
+            {renderHtml(message.messageToAnswer.message)}
           </button>
         </div>
       )}
@@ -157,7 +158,7 @@ function MessageItem({
           <Avatar src={message.sender.image} size={"semi-small"} />
         </div>
         <li className={liStyles}>
-          {message.message}
+          {renderHtml(message.message)}
           {message?.reactions?.length !== 0 && (
             <Menu as="div" className="">
               <Menu.Button
@@ -467,7 +468,7 @@ function RoomPage() {
     <Layout room={data} setOpenSlide={setOpenSlide} slider>
       {session && (
         <div className="flex flex-col flex-1 h-full ">
-          <ul className="flex flex-col p-4 flex-1 overflow-auto gap-2">
+          <ul className="flex flex-col p-4 flex-1 overflow-auto">
             {messages.map((m, i) => (
               <div key={m.id} id={`#${m.id}`}>
                 {messages[i - 1] &&
@@ -495,9 +496,8 @@ function RoomPage() {
             user={session.user}
             messages={messages}
             setMessages={setMessages}
-            onFocus={readRoom}
+            room={data}
             sendMessageMutation={sendMessageMutation}
-            roomId={roomId}
             message={message}
             setMessage={setMessage}
           />
